@@ -1,0 +1,126 @@
+/*
+ * CollabBoard colour themes
+ * ------------------------------------------------------------------
+ * Light is the :root default. Dark applies under `.dark` (shadcn
+ * convention) or `[data-theme="dark"]`. index.html currently ships with
+ * `class="dark"` on <html> as a static preview — no switching logic here.
+ *
+ * Naming follows shadcn (background, card, muted, accent…) so every
+ * shadcn component picks these up, plus CollabBoard-specific tokens
+ * (canvas, selected, brand, link, note).
+ *
+ * Accessibility note: `--primary` is the filled-button colour. In light it
+ * is teal-700 (#0F766E, 5.5:1 with white text); in dark it is teal-500
+ * (#14B8A6) with near-black text (≈7:1). The brand teal #0D9488 is kept as
+ * `--brand` for the logo, icons, focus rings and selected states.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --background: #faf9f6;
+  --canvas: #f5f5f0;
+  --canvas-dot: rgb(28 25 23 / 0.14);
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+  --secondary: #f3f4f2;
+  --secondary-foreground: #1c1917;
+  --muted: #f3f4f2;
+  --accent: #f1f0ec; /* hover surface */
+  --accent-foreground: #1c1917;
+
+  /* Text */
+  --foreground: #1c1917;
+  --muted-foreground: #78716c;
+  --subtle-foreground: #a29b96; /* shortcut hints, non-essential meta */
+
+  /* Lines */
+  --border: #e7e5e4;
+  --border-strong: #d6d3d1;
+  --input: #e7e5e4;
+  --ring: rgb(13 148 136 / 0.5);
+
+  /* Brand & actions */
+  --brand: #0d9488;
+  --brand-soft: #5eead4;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-foreground: #ffffff;
+  --link: #0f766e;
+
+  /* Selection */
+  --selected: #e3f3f0;
+  --selected-foreground: #0f766e;
+  --selected-border: rgb(13 148 136 / 0.3);
+
+  /* Status & content */
+  --note: #fef3c7;
+  --note-border: #f2d98b;
+  --success: #16a34a;
+  --destructive: #dc2626;
+
+  /* Elevation */
+  --elevation-xs: 0 1px 2px rgb(28 25 23 / 0.05);
+  --elevation-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 14px -4px rgb(28 25 23 / 0.07);
+  --elevation-floating: 0 1px 2px rgb(28 25 23 / 0.05), 0 6px 20px -6px rgb(28 25 23 / 0.12);
+  --elevation-popover: 0 2px 6px rgb(28 25 23 / 0.05), 0 18px 44px -12px rgb(28 25 23 / 0.2);
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces — layered near-blacks rather than an inverted light theme */
+  --background: #121212;
+  --canvas: #151515;
+  --canvas-dot: rgb(255 255 255 / 0.08);
+  --card: #1c1c1f;
+  --card-foreground: #f5f5f4;
+  --popover: #1c1c1f;
+  --popover-foreground: #f5f5f4;
+  --secondary: #252529;
+  --secondary-foreground: #f5f5f4;
+  --muted: #252529;
+  --accent: #27272b;
+  --accent-foreground: #f5f5f4;
+
+  /* Text */
+  --foreground: #f5f5f4;
+  --muted-foreground: #a1a1aa;
+  --subtle-foreground: #71717a;
+
+  /* Lines */
+  --border: #333337;
+  --border-strong: #42424a;
+  --input: #333337;
+  --ring: rgb(94 234 212 / 0.5);
+
+  /* Brand & actions */
+  --brand: #0d9488;
+  --brand-soft: #5eead4;
+  --primary: #14b8a6;
+  --primary-hover: #2dd4bf;
+  --primary-foreground: #042f2e;
+  --link: #5eead4;
+
+  /* Selection */
+  --selected: rgb(13 148 136 / 0.2);
+  --selected-foreground: #5eead4;
+  --selected-border: rgb(94 234 212 / 0.28);
+
+  /* Status & content */
+  --note: #3a3320;
+  --note-border: #6b5c2c;
+  --success: #22c55e;
+  --destructive: #f87171;
+
+  /* Elevation — stronger, tighter shadows plus a faint top highlight */
+  --elevation-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elevation-card: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 4px 14px -4px rgb(0 0 0 / 0.5);
+  --elevation-floating: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --elevation-popover: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 20px 48px -12px rgb(0 0 0 / 0.7);
+}

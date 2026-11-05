@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- class="dark" is the fallback; the script below applies the saved theme before first paint. -->
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Keep in sync with src/hooks/useTheme.ts (storage key + default).
+      (function () {
+        try {
+          var theme = localStorage.getItem("collabboard-theme") || "dark";
+          var dark = theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="CollabBoard — a collaborative whiteboard for sketching, planning and deciding together." />
+    <title>CollabBoard</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
