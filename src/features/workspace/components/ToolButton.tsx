@@ -1,14 +1,15 @@
 import { Tooltip } from "@/components/common/Tooltip";
 import { cn } from "@/lib/utils";
-import type { ToolDefinition } from "../data/tools";
+import type { ToolDefinition, ToolId } from "../data/tools";
 
 interface ToolButtonProps {
   tool: ToolDefinition;
   active?: boolean;
+  onClick?: (toolId: ToolId) => void;
 }
 
 /** Single toolbar tool. The corner shortcut letter is hidden below `sm` (touch). */
-export function ToolButton({ tool, active = false }: ToolButtonProps) {
+export function ToolButton({ tool, active = false, onClick }: ToolButtonProps) {
   const Icon = tool.icon;
 
   return (
@@ -17,6 +18,7 @@ export function ToolButton({ tool, active = false }: ToolButtonProps) {
         type="button"
         aria-label={tool.label}
         aria-pressed={active}
+        onClick={() => onClick?.(tool.id)}
         className={cn(
           "relative inline-flex size-(--tool-size) shrink-0 items-center justify-center rounded-tool text-foreground/80 transition-colors duration-150",
           "hover:bg-accent hover:text-foreground",

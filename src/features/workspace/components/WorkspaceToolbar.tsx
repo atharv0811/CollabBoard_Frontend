@@ -4,20 +4,20 @@ import { Divider } from "@/components/common/Divider";
 import { IconButton } from "@/components/common/IconButton";
 import { Tooltip } from "@/components/common/Tooltip";
 import { cn } from "@/lib/utils";
-import { PREVIEW_ACTIVE_TOOL, toolGroups } from "../data/tools";
+import { toolGroups, type ToolId } from "../data/tools";
 import { ToolButton } from "./ToolButton";
 
 interface WorkspaceToolbarProps {
   className?: string;
+  activeTool: ToolId;
+  onToolChange: (toolId: ToolId) => void;
 }
 
-/**
- * Floating tool palette. WorkspacePage places it top-centre on large
- * screens and at the bottom of the viewport on smaller ones. Below `sm`
- * it scrolls horizontally; above that it stays overflow-visible so the
- * CSS tooltips are not clipped.
- */
-export function WorkspaceToolbar({ className }: WorkspaceToolbarProps) {
+export function WorkspaceToolbar({
+  className,
+  activeTool,
+  onToolChange,
+}: WorkspaceToolbarProps) {
   return (
     <div
       role="toolbar"
@@ -31,7 +31,12 @@ export function WorkspaceToolbar({ className }: WorkspaceToolbarProps) {
         <Fragment key={group[0]?.id ?? index}>
           {index > 0 && <Divider orientation="vertical" />}
           {group.map((tool) => (
-            <ToolButton key={tool.id} tool={tool} active={tool.id === PREVIEW_ACTIVE_TOOL} />
+            <ToolButton
+              key={tool.id}
+              tool={tool}
+              active={tool.id === activeTool}
+              onClick={onToolChange}
+            />
           ))}
         </Fragment>
       ))}

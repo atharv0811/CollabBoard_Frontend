@@ -20,7 +20,8 @@ const sideClass: Record<TooltipSide, string> = {
 };
 
 /**
- * CSS-only tooltip: appears on hover / keyboard focus of the wrapped element.
+ * CSS-only tooltip: appears on hover, or when the wrapped element has
+ * keyboard focus (:focus-visible). Mouse clicks don't keep it open.
  * No JavaScript positioning — swap for a floating-ui tooltip later if needed.
  */
 export function Tooltip({ label, shortcut, side = "bottom", children, className }: TooltipProps) {
@@ -31,7 +32,9 @@ export function Tooltip({ label, shortcut, side = "bottom", children, className 
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-(--z-tooltip) flex items-center gap-2 rounded-md border border-border bg-popover px-2 py-1 text-xs font-medium whitespace-nowrap text-popover-foreground opacity-0 shadow-popover transition-opacity duration-150",
-          "group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100",
+          // Hover, or keyboard focus only (:focus-visible) — a mouse click focuses
+          // the button but must not keep the tooltip open after the pointer leaves.
+          "group-hover/tooltip:opacity-100 group-has-[:focus-visible]/tooltip:opacity-100",
           sideClass[side],
         )}
       >
