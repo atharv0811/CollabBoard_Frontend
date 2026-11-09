@@ -1,20 +1,35 @@
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { elementFromDraft } from "../canvas/drafts";
-import type { ToolId } from "../data/tools";
+import { isDrawingTool } from "../canvas/elements";
+import { useCanvasInteraction } from "../hooks/useCanvasInteraction";
 import { useCanvasViewport } from "../hooks/useCanvasViewport";
-import { useDrawingInteraction } from "../hooks/useDrawingInteraction";
+import { useWorkspaceStore } from "../store/workspaceStore";
 import { CanvasElementView } from "./CanvasElementView";
+import { SelectionOverlay } from "./SelectionOverlay";
 
 interface CanvasSurfaceProps {
   className?: string;
-  activeTool?: ToolId;
 }
 
 const PREVIEW_ID = "preview";
 
-export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
+export function CanvasSurface({ className }: CanvasSurfaceProps) {
   const viewport = useCanvasViewport<SVGSVGElement>();
-  const { elements, draft, handlers } = useDrawingInteraction(activeTool);
+  const elements = useWorkspaceStore((state) => state.elements);
+  const selectedIds = useWorkspaceStore((state) => state.selectedIds);
+  const drawing = useWorkspaceStore((state) => isDrawingTool(state.activeTool));
+  const { draft, preview, marquee, cursor, handlers } = useCanvasInteraction(viewport.ref);
+
+  // Elements as displayed: committed data with any live move / resize preview applied.
+  const displayed = useMemo(
+    () => (preview ? elements.map((element) => preview.get(element.id) ?? element) : elements),
+    [elements, preview],
+  );
+  const selected = useMemo(() => {
+    const ids = new Set(selectedIds);
+    return displayed.filter((element) => ids.has(element.id));
+  }, [displayed, selectedIds]);
 
   const previewElement = draft ? elementFromDraft(draft, PREVIEW_ID) : null;
 
@@ -29,6 +44,7 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
       <svg
         ref={viewport.ref}
         className="h-full w-full touch-none select-none text-foreground"
+        style={{ cursor: drawing ? "crosshair" : cursor }}
         viewBox={
           viewport.isReady
             ? `0 0 ${viewport.width} ${viewport.height}`
@@ -37,13 +53,15 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
         preserveAspectRatio="xMinYMin meet"
         {...handlers}
       >
-        {elements.map((element) => (
+        {displayed.map((element) => (
           <CanvasElementView key={element.id} element={element} />
         ))}
 
         {previewElement && (
           <CanvasElementView element={previewElement} preview />
         )}
+
+        <SelectionOverlay selected={selected} marquee={marquee} />
       </svg>
     </main>
   );

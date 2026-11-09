@@ -212,7 +212,7 @@ function createPage(browser, { url, mode }) {
       const pts = (value) => value.trim().split(/\\s+/).map((pair) => { const [x, y] = pair.split(',').map(Number); return { x, y }; });
       return [...document.querySelectorAll('${CANVAS} [data-shape-id]')].map((el) => {
         const type = el.getAttribute('data-element-type');
-        const base = { type, tag: el.tagName };
+        const base = { id: el.getAttribute('data-shape-id'), type, tag: el.tagName };
         if (type === 'rectangle') return { ...base, x: num(el, 'x'), y: num(el, 'y'), width: num(el, 'width'), height: num(el, 'height') };
         if (type === 'ellipse') return { ...base, cx: num(el, 'cx'), cy: num(el, 'cy'), rx: num(el, 'rx'), ry: num(el, 'ry') };
         if (type === 'diamond') return { ...base, vertices: pts(el.getAttribute('points')) };
@@ -242,13 +242,14 @@ function createPage(browser, { url, mode }) {
     })()`);
   }
 
-  async function mouseClickDrag(from, to, button) {
+  async function mouseClickDrag(from, to, button, { shift = false } = {}) {
     const buttons = button === "right" ? 2 : 1;
-    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: from.x, y: from.y, button, buttons, clickCount: 1 });
+    const modifiers = shift ? 8 : 0;
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: from.x, y: from.y, button, buttons, clickCount: 1, modifiers });
     for (let step = 1; step <= 6; step++) {
-      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + ((to.x - from.x) * step) / 6, y: from.y + ((to.y - from.y) * step) / 6, button, buttons });
+      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + ((to.x - from.x) * step) / 6, y: from.y + ((to.y - from.y) * step) / 6, button, buttons, modifiers });
     }
-    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: to.x, y: to.y, button, buttons: 0, clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: to.x, y: to.y, button, buttons: 0, clickCount: 1, modifiers });
     await sleep(120);
   }
 
@@ -267,11 +268,123 @@ function createPage(browser, { url, mode }) {
     })()`);
   }
 
+  /** Current selection as shown by the overlay, plus handle centres in client px. */
+  async function selection() {
+    return evaluate(`(() => {
+      const g = document.querySelector('${CANVAS} [data-selection]');
+      const ids = g ? g.getAttribute('data-selected-ids').split(' ').filter(Boolean) : [];
+      const center = (el) => { const b = el.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+      const collect = (attr) => Object.fromEntries([...document.querySelectorAll('${CANVAS} [' + attr + ']')].map((h) => [h.getAttribute(attr), center(h)]));
+      return { ids, handles: collect('data-handle'), endpoints: collect('data-endpoint'), marquee: !!document.querySelector('${CANVAS} [data-marquee]') };
+    })()`);
+  }
+
+  /** Click (mouse, optionally with Shift) or tap (touch). */
+  async function click(point, { shift = false } = {}) {
+    if (touch) {
+      await pointerDown(point.x, point.y);
+      await sleep(30);
+      await pointerUp(point.x, point.y);
+      return;
+    }
+    const modifiers = shift ? 8 : 0;
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1, modifiers });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1, modifiers });
+    await sleep(120);
+  }
+
+  /** Moves the mouse with no button pressed and returns the canvas cursor. */
+  async function hover(point) {
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y, button: "none", buttons: 0 });
+    await sleep(50);
+    return canvasCursor();
+  }
+
+  async function canvasCursor() {
+    return evaluate(`getComputedStyle(document.querySelector('${CANVAS}')).cursor`);
+  }
+
+  async function key(name) {
+    const codes = { Delete: 46, Backspace: 8, Escape: 27 };
+    for (const type of ["keyDown", "keyUp"]) {
+      await send("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: codes[name], nativeVirtualKeyCode: codes[name] });
+    }
+    await sleep(100);
+  }
+
   return {
     open, drag, selectTool, shapes, elements, geometry, resize, touchEvent, toolCenter,
     dropPointerCapture, mouseClickDrag, pointerDown, pointerMove, pointerUp, touch,
+    selection, click, key, evaluate, hover, canvasCursor,
   };
 }
+
+// ----------------------------------------------------- selection test helpers
+
+/** One element of each type at fixed spots, with a point on each stroke. */
+function layout(mode) {
+  const cells = mode === "desktop"
+    ? [[300, 200, 420, 290], [480, 200, 600, 290], [660, 200, 780, 290], [300, 420, 420, 500], [480, 420, 600, 500], [660, 420, 780, 500]]
+    : [[40, 110, 160, 190], [220, 110, 340, 190], [40, 250, 160, 330], [220, 250, 340, 330], [40, 390, 160, 470], [220, 390, 340, 470]];
+  return DRAWING_TOOLS.map(({ type, label }, index) => {
+    const [x0, y0, x1, y1] = cells[index];
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const hit = {
+      rectangle: { x: cx, y: y0 }, // top edge
+      ellipse: { x: x1, y: cy }, // right-most point
+      diamond: { x: (x0 + cx) / 2, y: (y0 + cy) / 2 }, // middle of the top-left edge
+    }[type] ?? { x: cx, y: cy }; // line, arrow, freehand: middle of the stroke
+    return { type, label, from: { x: x0, y: y0 }, to: { x: x1, y: y1 }, box: [x0, y0, x1, y1], hit };
+  });
+}
+
+/** Draws one element per tool, switches to Select, and returns layout + element ids by type. */
+async function drawAll(page, mode) {
+  const items = layout(mode);
+  for (const item of items) {
+    await page.selectTool(item.label);
+    await page.drag(item.from, item.to);
+  }
+  await page.selectTool("Select");
+  const drawn = await page.elements();
+  return items.map((item, index) => ({ ...item, id: drawn[index]?.id }));
+}
+
+/** Expected DOM geometry after moving by (dx, dy): every x / cx and y / cy shifts. */
+function shifted(value, dx, dy) {
+  if (Array.isArray(value)) return value.map((item) => shifted(item, dx, dy));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, v]) => [
+        key,
+        typeof v === "number" && (key === "x" || key === "cx") ? v + dx
+          : typeof v === "number" && (key === "y" || key === "cy") ? v + dy
+            : shifted(v, dx, dy),
+      ]),
+    );
+  }
+  return value;
+}
+
+/** Recursively compares numbers within 1px; ignores the path string `d`. */
+function nearDeep(fail, label, actual, expected) {
+  if (typeof expected === "number") return near(fail, label, actual, expected);
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual) || actual.length !== expected.length) return fail(`${label}: length mismatch`);
+    return expected.forEach((item, index) => nearDeep(fail, `${label}[${index}]`, actual[index], item));
+  }
+  if (expected && typeof expected === "object") {
+    for (const [key, value] of Object.entries(expected)) {
+      if (key !== "d") nearDeep(fail, `${label}.${key}`, actual?.[key], value);
+    }
+    return;
+  }
+  if (actual !== expected) fail(`${label}: expected ${expected}, got ${actual}`);
+}
+
+const byId = (list, id) => list.find((element) => element.id === id);
+const sameList = (a, b) => [...a].sort().join(",") === [...b].sort().join(",");
 
 // ------------------------------------------------------------ assertions
 
@@ -545,6 +658,345 @@ function defineTests(page, mode) {
         expect({ types }, { types: "rectangle,ellipse,arrow,freehand" });
       },
     },
+
+    // ---- Milestone 3: selection, move, multi-select, resize, delete
+
+    {
+      name: "S1: clicking each element type selects it; clicking empty canvas deselects",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        for (const item of items) {
+          await page.click(item.hit);
+          const { ids } = await page.selection();
+          if (!(ids.length === 1 && ids[0] === item.id)) fail(`${item.type}: selection ${JSON.stringify(ids)}`);
+          await page.click(item.hit); // clicking it again keeps it selected
+          const again = await page.selection();
+          if (!(again.ids.length === 1 && again.ids[0] === item.id)) fail(`${item.type}: re-click changed selection`);
+        }
+        const empty = mode === "desktop" ? { x: 1000, y: 600 } : { x: 300, y: 600 };
+        await page.click(empty);
+        expect({ selected: (await page.selection()).ids.length }, { selected: 0 });
+        expect(await page.shapes(), { committed: 6, preview: 0 });
+      },
+    },
+    {
+      name: "S2: overlapping strokes — the topmost (last drawn) element is selected",
+      async run(expect) {
+        const [x0, y0, x1, y1] = mode === "desktop" ? [400, 250, 600, 400] : [80, 200, 300, 360];
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 }); // rectangle (tool preselected)
+        expect({ ellipse: await page.selectTool("Ellipse") }, { ellipse: true });
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 }); // ellipse in the same box, on top
+        await page.selectTool("Select");
+        const [rect, ellipse] = await page.elements();
+        await page.click({ x: (x0 + x1) / 2, y: y0 }); // both strokes pass through the top-centre
+        expect({ selected: (await page.selection()).ids.join() }, { selected: ellipse.id });
+        // On the rectangle's left edge, 15% down: clear of the ellipse stroke and the ellipse selection's handles.
+        await page.click({ x: x0, y: y0 + (y1 - y0) * 0.15 });
+        expect({ selected: (await page.selection()).ids.join() }, { selected: rect.id });
+      },
+    },
+    {
+      name: "S3: Shift-click adds to and removes from the selection",
+      skip: touchOnly && "needs a keyboard modifier",
+      async run(expect) {
+        const [rect, ellipse, diamond] = await drawAll(page, mode);
+        await page.click(rect.hit);
+        await page.click(ellipse.hit, { shift: true });
+        await page.click(diamond.hit, { shift: true });
+        expect({ ids: (await page.selection()).ids.join() }, { ids: [rect.id, ellipse.id, diamond.id].join() });
+        await page.click(rect.hit, { shift: true });
+        expect({ ids: (await page.selection()).ids.join() }, { ids: [ellipse.id, diamond.id].join() });
+      },
+    },
+    {
+      name: "S4: dragging moves each element type by exactly the drag distance, size unchanged",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        const before = await page.elements();
+        const [dx, dy] = [30, 25];
+        for (const item of items) await page.drag(item.hit, { x: item.hit.x + dx, y: item.hit.y + dy });
+        const after = await page.elements();
+        for (const item of items) nearDeep(fail, item.type, byId(after, item.id), shifted(byId(before, item.id), dx, dy));
+        expect(await page.shapes(), { committed: 6, preview: 0 }); // moving never draws
+      },
+    },
+    {
+      name: "S5: marquee selects fully contained elements; they move together keeping relative positions",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        const [a1, a2] = items; // first two cells of the layout
+        const pad = 30; // marquees must start clear of the selection's handles (18px touch radius)
+        const marqueeFrom = { x: Math.min(a1.box[0], a2.box[0]) - pad, y: Math.min(a1.box[1], a2.box[1]) - pad };
+        const marqueeTo = { x: Math.max(a1.box[2], a2.box[2]) + pad, y: Math.max(a1.box[3], a2.box[3]) + pad };
+        await page.click({ x: 5, y: marqueeTo.y + 300 }); // start from a clean selection
+        await page.drag(marqueeFrom, marqueeTo);
+        const { ids, marquee } = await page.selection();
+        if (!sameList(ids, [a1.id, a2.id])) fail(`marquee selected ${JSON.stringify(ids)}`);
+        expect({ marqueeVisibleAfterRelease: marquee }, { marqueeVisibleAfterRelease: false });
+
+        // A marquee that only partly covers an element does not select it.
+        await page.drag(marqueeFrom, { x: (a1.box[0] + a1.box[2]) / 2, y: marqueeTo.y });
+        const partial = (await page.selection()).ids;
+        if (partial.length !== 0) fail(`partial marquee selected ${JSON.stringify(partial)}`);
+
+        await page.drag(marqueeFrom, marqueeTo);
+        const before = await page.elements();
+        const [dx, dy] = [20, 30];
+        await page.drag(a1.hit, { x: a1.hit.x + dx, y: a1.hit.y + dy });
+        const after = await page.elements();
+        for (const item of items) {
+          const moved = item.id === a1.id || item.id === a2.id;
+          nearDeep(fail, item.type, byId(after, item.id), moved ? shifted(byId(before, item.id), dx, dy) : byId(before, item.id));
+        }
+      },
+    },
+    {
+      name: "S6: Shift+marquee adds to the selection; a plain marquee replaces it",
+      skip: touchOnly && "needs a keyboard modifier",
+      async run(expect) {
+        const items = await drawAll(page, mode);
+        const last = items[5];
+        await page.click(items[0].hit);
+        const around = (box) => [{ x: box[0] - 10, y: box[1] - 10 }, { x: box[2] + 10, y: box[3] + 10 }];
+        const [from, to] = around(last.box);
+        await page.mouseClickDrag(from, to, "left", { shift: true });
+        expect({ ids: (await page.selection()).ids.join() }, { ids: [items[0].id, last.id].join() });
+        // A plain marquee must start outside the current selection box (inside it would move the selection).
+        await page.drag({ x: last.box[2] + 20, y: last.box[3] + 20 }, { x: last.box[0] - 10, y: last.box[1] - 10 });
+        expect({ ids: (await page.selection()).ids.join() }, { ids: last.id });
+      },
+    },
+    {
+      name: "S7: corner and edge handles resize, including past the opposite edge and down to the minimum",
+      async run(expect, fail) {
+        const [x0, y0, x1, y1] = mode === "desktop" ? [500, 250, 700, 400] : [100, 200, 260, 330];
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 });
+        await page.selectTool("Select");
+        await page.click({ x: (x0 + x1) / 2, y: y0 });
+
+        const rectNow = async () => (await page.elements())[0];
+        const dragHandle = async (handle, dx, dy) => {
+          const position = (await page.selection()).handles[handle];
+          if (!position) return fail(`handle ${handle} not shown`);
+          await page.drag(position, { x: position.x + dx, y: position.y + dy });
+        };
+
+        await dragHandle("se", 40, 30); // corner: grow
+        nearDeep(fail, "se", await rectNow(), { x: x0, y: y0, width: x1 - x0 + 40, height: y1 - y0 + 30 });
+
+        await dragHandle("n", 0, -20); // edge: only the top moves
+        nearDeep(fail, "n", await rectNow(), { x: x0, y: y0 - 20, width: x1 - x0 + 40, height: y1 - y0 + 50 });
+
+        await dragHandle("w", 25, 0); // edge: only the left moves
+        let r = await rectNow();
+        nearDeep(fail, "w", r, { x: x0 + 25, y: y0 - 20, width: x1 - x0 + 15, height: y1 - y0 + 50 });
+
+        // Negative direction: drag the right edge 60px past the left edge → the box flips.
+        await dragHandle("e", -(r.width + 60), 0);
+        nearDeep(fail, "e flipped", await rectNow(), { x: r.x - 60, y: r.y, width: 60, height: r.height });
+
+        // Minimum size: drag the bottom edge to 2px below the top → clamps at 8.
+        r = await rectNow();
+        await dragHandle("s", 0, -(r.height - 2));
+        nearDeep(fail, "s min", await rectNow(), { x: r.x, y: r.y, width: r.width, height: 8 });
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+      },
+    },
+    {
+      name: "S8: line and arrow endpoints move independently; dragging the body moves the whole",
+      async run(expect, fail) {
+        for (const label of ["Line", "Arrow"]) {
+          await page.open();
+          await page.selectTool(label);
+          const [from, to] = mode === "desktop" ? [{ x: 450, y: 300 }, { x: 650, y: 400 }] : [{ x: 80, y: 220 }, { x: 260, y: 360 }];
+          await page.drag(from, to);
+          await page.selectTool("Select");
+          await page.click({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 });
+
+          const { endpoints, handles } = await page.selection();
+          expect({ [`${label} box handles`]: Object.keys(handles).length }, { [`${label} box handles`]: 0 });
+          if (!endpoints.end) return fail(`${label}: no endpoint handles`);
+          await page.drag(endpoints.end, { x: endpoints.end.x + 40, y: endpoints.end.y - 30 });
+          let el = (await page.elements())[0];
+          nearDeep(fail, `${label} end moved`, el, { start: from, end: { x: to.x + 40, y: to.y - 30 } });
+          if (label === "Arrow") nearDeep(fail, "arrowhead tip follows", el.head[1], el.end);
+
+          const mid = { x: (el.start.x + el.end.x) / 2, y: (el.start.y + el.end.y) / 2 };
+          await page.drag(mid, { x: mid.x - 20, y: mid.y + 15 });
+          el = (await page.elements())[0];
+          nearDeep(fail, `${label} body moved`, el, {
+            start: { x: from.x - 20, y: from.y + 15 },
+            end: { x: to.x + 40 - 20, y: to.y - 30 + 15 },
+          });
+        }
+      },
+    },
+    {
+      name: "S9: freehand resizes proportionally through its box",
+      async run(expect, fail) {
+        await page.selectTool("Draw");
+        const [from, to] = mode === "desktop" ? [{ x: 450, y: 300 }, { x: 650, y: 400 }] : [{ x: 80, y: 220 }, { x: 260, y: 360 }];
+        await page.drag(from, to);
+        await page.selectTool("Select");
+        await page.click({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 });
+        const before = (await page.elements())[0];
+        const se = (await page.selection()).handles.se;
+        if (!se) return fail("no se handle");
+        await page.drag(se, { x: se.x + 60, y: se.y + 40 });
+        const after = (await page.elements())[0];
+        expect({ pointCount: after.pointCount }, { pointCount: before.pointCount });
+        nearDeep(fail, "bbox", after.bbox, { x: before.bbox.x, y: before.bbox.y, width: before.bbox.width + 60, height: before.bbox.height + 40 });
+      },
+    },
+    {
+      name: "S10: cancel, lost capture and tool switches mid-drag revert only the unfinished move/resize",
+      async run(expect, fail) {
+        const [x0, y0, x1, y1] = mode === "desktop" ? [500, 250, 700, 400] : [100, 200, 260, 330];
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 });
+        await page.selectTool("Select");
+        const hit = { x: x0 + (x1 - x0) / 4, y: y0 }; // on the top edge, clear of the n / nw handles
+        await page.click(hit);
+        const original = (await page.elements())[0];
+
+        // 1. Lost pointer capture during a resize.
+        const se = (await page.selection()).handles.se;
+        await page.drag(se, { x: se.x + 50, y: se.y + 50 }, { release: false });
+        if ((await page.dropPointerCapture()) !== true) fail("resize had no pointer capture");
+        await page.pointerMove(se.x + 70, se.y + 70);
+        await page.pointerUp(se.x + 70, se.y + 70);
+        nearDeep(fail, "after lost capture", (await page.elements())[0], original);
+
+        // 2. Tool switched mid-move (e.g. by a shortcut): the move is abandoned.
+        await page.drag(hit, { x: hit.x + 40, y: hit.y + 40 }, { release: false });
+        await page.evaluate(`[...document.querySelectorAll('button[aria-label="Ellipse"]')].find((b) => b.offsetParent).click()`);
+        await sleep(60);
+        await page.pointerMove(hit.x + 60, hit.y + 60);
+        await page.pointerUp(hit.x + 60, hit.y + 60);
+        nearDeep(fail, "after tool switch", (await page.elements())[0], original);
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+        await page.selectTool("Select");
+
+        if (touchOnly) {
+          // 3. touchcancel during a move.
+          await page.drag(hit, { x: hit.x + 30, y: hit.y + 30 }, { release: false });
+          await page.touchEvent("touchCancel", []);
+          await sleep(100);
+          nearDeep(fail, "after touchcancel", (await page.elements())[0], original);
+        }
+
+        // 4. Still fully usable afterwards.
+        await page.drag(hit, { x: hit.x + 10, y: hit.y + 10 });
+        nearDeep(fail, "normal move after", (await page.elements())[0], shifted(original, 10, 10));
+      },
+    },
+    {
+      name: "S11: a second finger cannot interfere with an active move",
+      skip: !touchOnly && "multi-touch only",
+      async run(expect, fail) {
+        const [x0, y0, x1, y1] = [100, 200, 260, 330];
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 });
+        await page.selectTool("Select");
+        await page.click({ x: 180, y: y0 });
+        const original = (await page.elements())[0];
+        const A = (x, y) => ({ id: 0, x, y });
+        const B = (x, y) => ({ id: 1, x, y });
+        // Finger A grabs the top edge clear of the n / nw handles; finger B lands on empty canvas.
+        await page.touchEvent("touchStart", [A(140, y0)]);
+        await sleep(16);
+        await page.touchEvent("touchMove", [A(150, y0 + 10)]);
+        await sleep(16);
+        await page.touchEvent("touchStart", [A(150, y0 + 10), B(320, 620)]);
+        await sleep(16);
+        await page.touchEvent("touchMove", [A(160, y0 + 20), B(250, 680)]);
+        await sleep(16);
+        await page.touchEvent("touchEnd", [B(250, 680)]);
+        await sleep(16);
+        await page.touchEvent("touchMove", [A(170, y0 + 30)]);
+        await sleep(16);
+        await page.touchEvent("touchEnd", [A(170, y0 + 30)]);
+        await sleep(150);
+
+        nearDeep(fail, "moved by finger A only", (await page.elements())[0], shifted(original, 30, 30));
+        expect({ stillSelected: (await page.selection()).ids.length }, { stillSelected: 1 });
+      },
+    },
+    {
+      name: "S12: Delete / Backspace / Delete button remove the selection; typing in a field does not",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        await page.click(items[0].hit);
+        await page.key("Delete");
+        expect({ count: (await page.elements()).length, selected: (await page.selection()).ids.length }, { count: 5, selected: 0 });
+
+        // Multiple: marquee around the last two cells, then Backspace.
+        const [c4, c5] = [items[4], items[5]];
+        await page.drag(
+          { x: Math.min(c4.box[0], c5.box[0]) - 10, y: Math.min(c4.box[1], c5.box[1]) - 10 },
+          { x: Math.max(c4.box[2], c5.box[2]) + 10, y: Math.max(c4.box[3], c5.box[3]) + 10 },
+        );
+        expect({ selectedBeforeBackspace: (await page.selection()).ids.length }, { selectedBeforeBackspace: 2 });
+        await page.key("Backspace");
+        const remaining = (await page.elements()).map((el) => el.id);
+        if (!sameList(remaining, [items[1].id, items[2].id, items[3].id])) fail(`remaining ${JSON.stringify(remaining)}`);
+
+        // The Delete action in the UI.
+        await page.click(items[1].hit);
+        await page.evaluate(`[...document.querySelectorAll('button[aria-label^="Delete"]')].find((b) => b.offsetParent).click()`);
+        await sleep(100);
+        expect({ afterButton: (await page.elements()).length, selected: (await page.selection()).ids.length }, { afterButton: 2, selected: 0 });
+
+        // Typing in an input must not delete.
+        await page.click(items[2].hit);
+        await page.evaluate(`(() => { const i = document.createElement('input'); i.id = 'test-input'; i.value = 'abc'; document.body.append(i); i.focus(); })()`);
+        await page.key("Backspace");
+        await page.key("Delete");
+        expect({ whileTyping: (await page.elements()).length }, { whileTyping: 2 });
+        expect({ inputStillWorks: await page.evaluate(`document.getElementById('test-input').value`) }, { inputStillWorks: "ab" });
+        await page.evaluate(`document.getElementById('test-input').remove()`);
+        await page.key("Delete");
+        expect({ afterBlur: (await page.elements()).length }, { afterBlur: 1 });
+      },
+    },
+    {
+      name: "S13: hover cursors match the action — resize on handles, move inside, grab on endpoints",
+      skip: touchOnly && "touch has no hover",
+      async run(expect, fail) {
+        const [x0, y0, x1, y1] = [500, 250, 700, 400];
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 });
+        expect({ drawingCursor: await page.hover({ x: 900, y: 600 }) }, { drawingCursor: "crosshair" });
+        await page.selectTool("Select");
+        await page.click({ x: x0 + 50, y: y0 });
+
+        const expectedByHandle = {
+          nw: "nwse-resize", se: "nwse-resize", ne: "nesw-resize", sw: "nesw-resize",
+          n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize",
+        };
+        const { handles } = await page.selection();
+        for (const [handle, cursor] of Object.entries(expectedByHandle)) {
+          if (!handles[handle]) {
+            fail(`handle ${handle} missing`);
+            continue;
+          }
+          const actual = await page.hover(handles[handle]);
+          if (actual !== cursor) fail(`${handle}: expected ${cursor}, got ${actual}`);
+        }
+        expect({ inside: await page.hover({ x: 600, y: 325 }) }, { inside: "move" });
+        expect({ empty: await page.hover({ x: 1000, y: 600 }) }, { empty: "default" });
+
+        // The cursor holds for the whole drag, even when the pointer leaves the handle.
+        await page.drag(handles.se, { x: handles.se.x + 80, y: handles.se.y + 60 }, { release: false });
+        expect({ duringResize: await page.canvasCursor() }, { duringResize: "nwse-resize" });
+        await page.pointerUp(handles.se.x + 80, handles.se.y + 60);
+
+        await page.selectTool("Line");
+        await page.drag({ x: 300, y: 500 }, { x: 450, y: 600 });
+        await page.selectTool("Select");
+        await page.click({ x: 375, y: 550 });
+        const { endpoints } = await page.selection();
+        expect({ start: await page.hover(endpoints.start), end: await page.hover(endpoints.end) }, { start: "grab", end: "grab" });
+        expect({ lineBody: await page.hover({ x: 340, y: 527 }) }, { lineBody: "move" });
+      },
+    },
   ];
 }
 
@@ -642,6 +1094,8 @@ async function runSuite(browser, { label, url, mode }) {
   console.log(`\n▸ ${label}  (${url})`);
 
   for (const test of defineTests(page, mode)) {
+    // ONLY=S2 runs just the tests whose name starts with "S2" (handy while debugging).
+    if (process.env.ONLY && !test.name.startsWith(process.env.ONLY)) continue;
     if (test.skip) {
       console.log(`  - skip  ${test.name}  (${test.skip})`);
       continue;
