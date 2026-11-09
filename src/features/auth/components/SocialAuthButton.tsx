@@ -28,10 +28,15 @@ interface SocialAuthButtonProps {
   label: string;
 }
 
-/** Visual-only "Continue with Google" button. */
 export function SocialAuthButton({ label }: SocialAuthButtonProps) {
   return (
-    <button type="button" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}>
+    <button
+      type="button"
+      className={cn(
+        buttonVariants({ variant: "outline", size: "lg" }),
+        "w-full",
+      )}
+    >
       <GoogleIcon />
       {label}
     </button>

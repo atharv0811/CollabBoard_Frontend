@@ -8,14 +8,14 @@ interface StatusBarProps {
   className?: string;
 }
 
-/**
- * Bottom status row: connection + collaboration placeholders centred
- * (keeping the left column free for the sidebar), help on the right.
- * Text values are static placeholders for you to bind to real state.
- */
 export function StatusBar({ className }: StatusBarProps) {
   return (
-    <div className={cn("pointer-events-none grid grid-cols-[1fr_auto_1fr] items-end gap-3", className)}>
+    <div
+      className={cn(
+        "pointer-events-none grid grid-cols-[1fr_auto_1fr] items-end gap-3",
+        className,
+      )}
+    >
       <span aria-hidden="true" />
       <div
         role="status"
@@ -36,8 +36,18 @@ export function StatusBar({ className }: StatusBarProps) {
         </span>
       </div>
 
-      <Tooltip label="Help" shortcut="?" side="top" className="pointer-events-auto justify-self-end">
-        <IconButton icon={CircleQuestionMark} label="Help" variant="floating" size="md" />
+      <Tooltip
+        label="Help"
+        shortcut="?"
+        side="top"
+        className="pointer-events-auto justify-self-end"
+      >
+        <IconButton
+          icon={CircleQuestionMark}
+          label="Help"
+          variant="floating"
+          size="md"
+        />
       </Tooltip>
     </div>
   );

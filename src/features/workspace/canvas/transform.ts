@@ -2,16 +2,8 @@ import { MIN_STROKE_LENGTH } from "./drafts.ts";
 import type { CanvasElement, Point } from "./elements.ts";
 import { boundsFromPoints, distance, ellipseFromBounds, type Bounds } from "./geometry.ts";
 
-/*
- * Pure element transforms — no React, no DOM.
- * Every transform is expressed as a point mapping applied to an element's
- * defining points, so move, resize and future operations share one path
- * and every element type is handled in exactly one place.
- */
-
 export type PointMap = (point: Point) => Point;
 
-/** Applies a point mapping to an element. Boxes are re-normalised, so mirroring is safe. */
 export function mapElement<T extends CanvasElement>(element: T, map: PointMap): T {
   switch (element.type) {
     case "rectangle":
@@ -39,7 +31,6 @@ export function translateElement<T extends CanvasElement>(element: T, dx: number
 
 export type HandleId = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
-/** Smallest box a resize may produce (world units), unless the original was already smaller. */
 export const MIN_RESIZE_SIZE = 8;
 
 interface AxisScale {
@@ -47,15 +38,9 @@ interface AxisScale {
   scale: number;
 }
 
-/**
- * One axis of a resize. `moving` is the edge being dragged, `anchor` the
- * opposite edge that stays fixed. The span may change sign (dragging past
- * the anchor), which mirrors the content; its magnitude is clamped so the
- * result is never smaller than the minimum.
- */
 function axisScale(anchor: number, originalMoving: number, delta: number, minSize: number): AxisScale {
   const originalSpan = originalMoving - anchor;
-  if (originalSpan === 0) return { anchor, scale: 1 }; // zero-size axis (e.g. a flat line): nothing to scale
+  if (originalSpan === 0) return { anchor, scale: 1 };
 
   let span = originalSpan + delta;
   const limit = Math.min(minSize, Math.abs(originalSpan));
@@ -64,11 +49,6 @@ function axisScale(anchor: number, originalMoving: number, delta: number, minSiz
   return { anchor, scale: span / originalSpan };
 }
 
-/**
- * Point mapping for dragging `handle` of `bounds` by (dx, dy).
- * Corner handles scale both axes, edge handles one. Works for a single
- * element or a whole multi-selection (pass the selection's bounds).
- */
 export function resizeMap(bounds: Bounds, handle: HandleId, dx: number, dy: number, minSize = MIN_RESIZE_SIZE): PointMap {
   const left = bounds.x;
   const right = bounds.x + bounds.width;
@@ -95,10 +75,6 @@ export function resizeMap(bounds: Bounds, handle: HandleId, dx: number, dy: numb
 
 export type EndpointId = "start" | "end";
 
-/**
- * Moves one endpoint of a line / arrow to `point`. Returns the element
- * unchanged if that would make it shorter than the minimum stroke length.
- */
 export function moveEndpoint<T extends Extract<CanvasElement, { type: "line" | "arrow" }>>(
   element: T,
   endpoint: EndpointId,

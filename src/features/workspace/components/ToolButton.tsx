@@ -8,7 +8,6 @@ interface ToolButtonProps {
   onClick?: (toolId: ToolId) => void;
 }
 
-/** Single toolbar tool. The corner shortcut letter is hidden below `sm` (touch). */
 export function ToolButton({ tool, active = false, onClick }: ToolButtonProps) {
   const Icon = tool.icon;
 

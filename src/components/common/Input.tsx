@@ -3,13 +3,16 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends ComponentProps<"input"> {
-  /** Optional leading icon */
   icon?: LucideIcon;
-  /** Optional element rendered inside the right edge */
   trailing?: ReactNode;
 }
 
-export function Input({ icon: Icon, trailing, className, ...props }: InputProps) {
+export function Input({
+  icon: Icon,
+  trailing,
+  className,
+  ...props
+}: InputProps) {
   return (
     <div className="group/input relative flex items-center">
       {Icon && (
@@ -29,7 +32,9 @@ export function Input({ icon: Icon, trailing, className, ...props }: InputProps)
         )}
         {...props}
       />
-      {trailing && <div className="absolute right-1.5 flex items-center">{trailing}</div>}
+      {trailing && (
+        <div className="absolute right-1.5 flex items-center">{trailing}</div>
+      )}
     </div>
   );
 }

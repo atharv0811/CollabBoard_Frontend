@@ -9,8 +9,10 @@ const iconButtonVariants = cva(
     variants: {
       variant: {
         ghost: "",
-        outline: "border border-border bg-card shadow-xs hover:border-border-strong",
-        floating: "surface-floating rounded-[10px] text-foreground hover:bg-accent",
+        outline:
+          "border border-border bg-card shadow-xs hover:border-border-strong",
+        floating:
+          "surface-floating rounded-[10px] text-foreground hover:bg-accent",
       },
       size: {
         sm: "size-8 [&_svg]:size-4",
@@ -23,14 +25,21 @@ const iconButtonVariants = cva(
 );
 
 interface IconButtonProps
-  extends Omit<ComponentProps<"button">, "children">,
+  extends
+    Omit<ComponentProps<"button">, "children">,
     VariantProps<typeof iconButtonVariants> {
   icon: LucideIcon;
-  /** Accessible name — required because there is no visible text */
   label: string;
 }
 
-export function IconButton({ icon: Icon, label, variant, size, className, ...props }: IconButtonProps) {
+export function IconButton({
+  icon: Icon,
+  label,
+  variant,
+  size,
+  className,
+  ...props
+}: IconButtonProps) {
   return (
     <button
       type="button"

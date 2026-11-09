@@ -16,7 +16,8 @@ const sketchTools = toolGroups[1]?.slice(0, 5) ?? [];
 const steps: Step[] = [
   {
     title: "Create a board",
-    description: "Start from a blank canvas in one click. No setup and no templates to wade through.",
+    description:
+      "Start from a blank canvas in one click. No setup and no templates to wade through.",
     visual: (
       <span className="flex items-center gap-1">
         <Kbd>Ctrl</Kbd>
@@ -27,12 +28,14 @@ const steps: Step[] = [
   },
   {
     title: "Invite your team",
-    description: "Share a link or add people by email. They join instantly, right in the browser.",
+    description:
+      "Share a link or add people by email. They join instantly, right in the browser.",
     visual: <AvatarStack people={sampleCollaborators} extra={4} size="sm" />,
   },
   {
     title: "Sketch and decide",
-    description: "Draw, annotate and rearrange together until the idea is clear to everyone.",
+    description:
+      "Draw, annotate and rearrange together until the idea is clear to everyone.",
     visual: (
       <span className="flex items-center gap-1">
         {sketchTools.map(({ id, icon: Icon }) => (
@@ -65,7 +68,7 @@ export function HowItWorksSection() {
         <ol className="relative mt-14 grid gap-5 md:grid-cols-3">
           <span
             aria-hidden="true"
-            className="absolute top-[2.375rem] right-[16%] left-[16%] hidden border-t border-dashed border-border-strong md:block"
+            className="absolute top-9.5 right-[16%] left-[16%] hidden border-t border-dashed border-border-strong md:block"
           />
           {steps.map((step, index) => (
             <li
@@ -75,9 +78,16 @@ export function HowItWorksSection() {
               <span className="inline-flex size-8 items-center justify-center rounded-full border border-selected-border bg-selected text-sm font-semibold text-selected-foreground">
                 {index + 1}
               </span>
-              <h3 className="mt-5 text-base font-semibold text-foreground">{step.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
-              <div aria-hidden="true" className="mt-6 flex h-10 items-center border-t border-border pt-4">
+              <h3 className="mt-5 text-base font-semibold text-foreground">
+                {step.title}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                {step.description}
+              </p>
+              <div
+                aria-hidden="true"
+                className="mt-6 flex h-10 items-center border-t border-border pt-4"
+              >
                 {step.visual}
               </div>
             </li>

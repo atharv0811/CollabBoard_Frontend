@@ -23,10 +23,16 @@ const toneBg: Record<AvatarTone, string> = {
   teal: "bg-tone-teal",
 };
 
-/** Static illustration of another person's pointer with a name tag. */
-export function CollaboratorCursor({ name, tone, className }: CollaboratorCursorProps) {
+export function CollaboratorCursor({
+  name,
+  tone,
+  className,
+}: CollaboratorCursorProps) {
   return (
-    <div aria-hidden="true" className={cn("pointer-events-none absolute flex items-start", className)}>
+    <div
+      aria-hidden="true"
+      className={cn("pointer-events-none absolute flex items-start", className)}
+    >
       <svg viewBox="0 0 16 16" className="size-4 drop-shadow-sm">
         <path
           d="M2 1.5 14 7l-5.3 1.4L6.6 14 2 1.5Z"

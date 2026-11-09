@@ -19,12 +19,13 @@ const sideClass: Record<TooltipSide, string> = {
   right: "left-full top-1/2 ml-2 -translate-y-1/2",
 };
 
-/**
- * CSS-only tooltip: appears on hover, or when the wrapped element has
- * keyboard focus (:focus-visible). Mouse clicks don't keep it open.
- * No JavaScript positioning — swap for a floating-ui tooltip later if needed.
- */
-export function Tooltip({ label, shortcut, side = "bottom", children, className }: TooltipProps) {
+export function Tooltip({
+  label,
+  shortcut,
+  side = "bottom",
+  children,
+  className,
+}: TooltipProps) {
   return (
     <span className={cn("group/tooltip relative inline-flex", className)}>
       {children}
@@ -32,14 +33,14 @@ export function Tooltip({ label, shortcut, side = "bottom", children, className 
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-(--z-tooltip) flex items-center gap-2 rounded-md border border-border bg-popover px-2 py-1 text-xs font-medium whitespace-nowrap text-popover-foreground opacity-0 shadow-popover transition-opacity duration-150",
-          // Hover, or keyboard focus only (:focus-visible) — a mouse click focuses
-          // the button but must not keep the tooltip open after the pointer leaves.
-          "group-hover/tooltip:opacity-100 group-has-[:focus-visible]/tooltip:opacity-100",
+          "group-hover/tooltip:opacity-100 group-has-focus-visible/tooltip:opacity-100",
           sideClass[side],
         )}
       >
         {label}
-        {shortcut && <Kbd className="h-4 min-w-4 px-1 text-[0.625rem]">{shortcut}</Kbd>}
+        {shortcut && (
+          <Kbd className="h-4 min-w-4 px-1 text-[0.625rem]">{shortcut}</Kbd>
+        )}
       </span>
     </span>
   );

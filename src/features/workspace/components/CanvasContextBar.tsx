@@ -9,10 +9,6 @@ interface CanvasContextBarProps {
   className?: string;
 }
 
-/**
- * Shows the onboarding hint, or — when something is selected — the
- * selection count with a Delete action, in the same spot under the toolbar.
- */
 export function CanvasContextBar({ className }: CanvasContextBarProps) {
   const count = useWorkspaceStore((state) => state.selectedIds.length);
   const deleteSelected = useWorkspaceStore((state) => state.deleteSelected);
@@ -23,7 +19,10 @@ export function CanvasContextBar({ className }: CanvasContextBarProps) {
     <div
       role="toolbar"
       aria-label="Selection actions"
-      className={cn("surface-floating flex h-9 items-center gap-1 pr-1 pl-3 text-xs", className)}
+      className={cn(
+        "surface-floating flex h-9 items-center gap-1 pr-1 pl-3 text-xs",
+        className,
+      )}
     >
       <span className="text-muted-foreground" aria-live="polite">
         {count} selected
@@ -37,7 +36,9 @@ export function CanvasContextBar({ className }: CanvasContextBarProps) {
       >
         <Trash aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
         Delete
-        <Kbd className="hidden h-4 min-w-4 px-1 text-[0.625rem] sm:inline-flex">Del</Kbd>
+        <Kbd className="hidden h-4 min-w-4 px-1 text-[0.625rem] sm:inline-flex">
+          Del
+        </Kbd>
       </button>
     </div>
   );

@@ -30,14 +30,9 @@ export interface ToolDefinition {
   id: ToolId;
   label: string;
   icon: LucideIcon;
-  /** Shortcut hint shown in the corner of the button and in its tooltip */
   shortcut?: string;
 }
 
-/**
- * Toolbar groups, rendered left → right with a divider between groups.
- * Drawing tools are handled by canvas/elements.ts (isDrawingTool).
- */
 export const toolGroups: ToolDefinition[][] = [
   [
     { id: "selection", label: "Select", icon: MousePointer2, shortcut: "V" },
@@ -56,5 +51,4 @@ export const toolGroups: ToolDefinition[][] = [
   ],
 ];
 
-/** The tool shown in its selected visual state in the static preview */
 export const PREVIEW_ACTIVE_TOOL: ToolId = "selection";

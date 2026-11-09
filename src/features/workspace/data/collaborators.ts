@@ -1,6 +1,5 @@
 import type { AvatarStackPerson } from "@/components/common/Avatar";
 
-/** Sample people used for static avatar / presence visuals. */
 export const sampleCollaborators: AvatarStackPerson[] = [
   { name: "Priya Shah", tone: "amber" },
   { name: "Marco Ruiz", tone: "sky" },

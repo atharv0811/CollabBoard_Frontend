@@ -5,16 +5,14 @@ import { cn } from "@/lib/utils";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 
 interface WorkspaceMenuProps {
-  /** Whether the panel starts open */
   defaultOpen?: boolean;
   className?: string;
 }
 
-/**
- * Top-left menu button + collapsible board menu panel.
- * Toggles on button click; closes on Escape or a click outside the menu.
- */
-export function WorkspaceMenu({ defaultOpen = false, className }: WorkspaceMenuProps) {
+export function WorkspaceMenu({
+  defaultOpen = false,
+  className,
+}: WorkspaceMenuProps) {
   const [open, setOpen] = useState(defaultOpen);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -44,7 +42,10 @@ export function WorkspaceMenu({ defaultOpen = false, className }: WorkspaceMenuP
   }, [open]);
 
   return (
-    <div ref={containerRef} className={cn("flex flex-col items-start gap-2", className)}>
+    <div
+      ref={containerRef}
+      className={cn("flex flex-col items-start gap-2", className)}
+    >
       <IconButton
         ref={buttonRef}
         icon={open ? X : Menu}

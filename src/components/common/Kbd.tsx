@@ -6,7 +6,6 @@ interface KbdProps {
   className?: string;
 }
 
-/** Keyboard shortcut chip, e.g. <Kbd>Ctrl+O</Kbd> */
 export function Kbd({ children, className }: KbdProps) {
   return (
     <kbd

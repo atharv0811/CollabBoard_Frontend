@@ -1,9 +1,5 @@
 import type { Point } from "./elements";
 
-/*
- * Pure geometry helpers — no React, no DOM. All values are world units.
- */
-
 export interface Bounds {
   x: number;
   y: number;
@@ -11,7 +7,6 @@ export interface Bounds {
   height: number;
 }
 
-/** Normalised box spanned by two corners dragged in any direction. */
 export function boundsFromPoints(a: Point, b: Point): Bounds {
   return {
     x: Math.min(a.x, b.x),
@@ -29,7 +24,6 @@ export function ellipseFromBounds({ x, y, width, height }: Bounds) {
   return { cx: x + width / 2, cy: y + height / 2, rx: width / 2, ry: height / 2 };
 }
 
-/** Diamond vertices in order: top, right, bottom, left. */
 export function diamondVertices({ x, y, width, height }: Bounds): [Point, Point, Point, Point] {
   const cx = x + width / 2;
   const cy = y + height / 2;
@@ -42,12 +36,8 @@ export function diamondVertices({ x, y, width, height }: Bounds): [Point, Point,
 }
 
 const ARROWHEAD_LENGTH = 14;
-const ARROWHEAD_SPREAD = Math.PI / 7; // ≈ 25.7° each side of the shaft
+const ARROWHEAD_SPREAD = Math.PI / 7;
 
-/**
- * Open arrowhead at `end`, pointing along start → end: [wing, tip, wing].
- * Its length shrinks on short arrows so the head never overshoots the shaft.
- */
 export function arrowheadPoints(start: Point, end: Point, strokeWidth: number): [Point, Point, Point] {
   const angle = Math.atan2(end.y - start.y, end.x - start.x);
   const length = Math.min(ARROWHEAD_LENGTH + strokeWidth * 2, distance(start, end) / 2);
@@ -60,7 +50,6 @@ export function arrowheadPoints(start: Point, end: Point, strokeWidth: number): 
   return [wing(ARROWHEAD_SPREAD), end, wing(-ARROWHEAD_SPREAD)];
 }
 
-/** True when `point` is far enough from the last recorded point to be worth keeping. */
 export function shouldAppendPoint(points: readonly Point[], point: Point, minDistance: number): boolean {
   const last = points[points.length - 1];
   return !last || distance(last, point) >= minDistance;
@@ -68,16 +57,10 @@ export function shouldAppendPoint(points: readonly Point[], point: Point, minDis
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
-/** "x,y x,y …" for SVG polygon / polyline `points`. */
 export function toSvgPoints(points: readonly Point[]): string {
   return points.map((p) => `${round(p.x)},${round(p.y)}`).join(" ");
 }
 
-/**
- * Smooth, continuous path through freehand points: quadratic curves whose
- * control points are the samples and whose end points are the midpoints
- * between samples. A single point renders as a dot.
- */
 export function freehandPathData(points: readonly Point[]): string {
   const [first, ...rest] = points;
   if (!first) return "";
@@ -93,7 +76,6 @@ export function freehandPathData(points: readonly Point[]): string {
   return `${d} L${round(last.x)} ${round(last.y)}`;
 }
 
-/** Bounding box of a point cloud (zero-sized for fewer than two points). */
 export function boundsOfPoints(points: readonly Point[]): Bounds {
   if (points.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
   let minX = Infinity;

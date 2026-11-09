@@ -2,14 +2,19 @@ import type { MenuItem } from "../data/menuItems";
 import { SidebarItem } from "./SidebarItem";
 
 interface SidebarSectionProps {
-  /** Visible group heading; omit for the top action list */
   title?: string;
   items: MenuItem[];
   activeId?: string;
 }
 
-export function SidebarSection({ title, items, activeId }: SidebarSectionProps) {
-  const headingId = title ? `sidebar-${title.toLowerCase().replace(/\s+/g, "-")}` : undefined;
+export function SidebarSection({
+  title,
+  items,
+  activeId,
+}: SidebarSectionProps) {
+  const headingId = title
+    ? `sidebar-${title.toLowerCase().replace(/\s+/g, "-")}`
+    : undefined;
 
   return (
     <section aria-labelledby={headingId} className="px-1.5">
@@ -23,7 +28,11 @@ export function SidebarSection({ title, items, activeId }: SidebarSectionProps) 
       )}
       <ul className="flex flex-col gap-px">
         {items.map((item) => (
-          <SidebarItem key={item.id} item={item} active={item.id === activeId} />
+          <SidebarItem
+            key={item.id}
+            item={item}
+            active={item.id === activeId}
+          />
         ))}
       </ul>
     </section>

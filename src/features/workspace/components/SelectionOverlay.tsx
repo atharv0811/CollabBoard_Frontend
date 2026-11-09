@@ -1,33 +1,36 @@
 import type { CanvasElement } from "../canvas/elements";
 import type { Bounds } from "../canvas/geometry";
 import { elementBounds } from "../canvas/hitTest";
-import { padBounds, SELECTION_PADDING, selectionFrame, visibleHandles } from "../canvas/selection";
+import {
+  padBounds,
+  SELECTION_PADDING,
+  selectionFrame,
+  visibleHandles,
+} from "../canvas/selection";
 
 interface SelectionOverlayProps {
-  /** Selected elements as currently displayed (including live move / resize previews) */
   selected: readonly CanvasElement[];
   marquee: Bounds | null;
 }
 
-/** Drawn handle size in world units. Hit areas are larger (see handleHitRadius). */
 const HANDLE_SIZE = 9;
 
-/**
- * Selection UI drawn on top of the elements. Purely visual: it never becomes
- * element data, ignores pointer events (all hit testing is geometric), and
- * uses theme tokens so it works in light and dark mode.
- */
 export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
   const frame = selectionFrame(selected);
 
   return (
     <g pointerEvents="none">
       {frame.kind !== "none" && (
-        <g data-selection="" data-selected-ids={selected.map((element) => element.id).join(" ")}>
-          {/* With several elements, outline each one inside the shared box */}
+        <g
+          data-selection=""
+          data-selected-ids={selected.map((element) => element.id).join(" ")}
+        >
           {selected.length > 1 &&
             selected.map((element) => {
-              const box = padBounds(elementBounds(element), SELECTION_PADDING / 2);
+              const box = padBounds(
+                elementBounds(element),
+                SELECTION_PADDING / 2,
+              );
               return (
                 <rect
                   key={element.id}
@@ -41,7 +44,13 @@ export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
 
           {frame.kind === "box" && (
             <>
-              <rect data-selection-box="" {...frame.frame} rx={2} className="fill-none stroke-brand" strokeWidth={1.25} />
+              <rect
+                data-selection-box=""
+                {...frame.frame}
+                rx={2}
+                className="fill-none stroke-brand"
+                strokeWidth={1.25}
+              />
               {visibleHandles(frame.frame).map(([id, position]) => (
                 <rect
                   key={id}

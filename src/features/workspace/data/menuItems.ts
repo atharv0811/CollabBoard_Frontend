@@ -18,7 +18,6 @@ export interface MenuItem {
   label: string;
   icon: LucideIcon;
   shortcut?: string;
-  /** Small count shown on the right instead of a shortcut */
   count?: number;
 }
 
@@ -39,5 +38,4 @@ export const workspaceLinks: MenuItem[] = [
   { id: "recent", label: "Recent boards", icon: Clock },
 ];
 
-/** Item drawn in its active visual state in the static preview */
 export const PREVIEW_ACTIVE_MENU_ITEM = "my-boards";

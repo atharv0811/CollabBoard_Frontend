@@ -3,13 +3,6 @@ import type { Bounds } from "./geometry.ts";
 import { boundsContainPoint, elementBounds, topmostElementAt, unionBounds } from "./hitTest.ts";
 import type { EndpointId, HandleId } from "./transform.ts";
 
-/*
- * Pure selection logic: selection geometry, handle hit testing, and the
- * decision of what a pointerdown with the selection tool should start.
- * No React, no DOM — the interaction hook just executes the decision.
- */
-
-/** Gap between the selected geometry and the drawn selection box. */
 export const SELECTION_PADDING = 6;
 
 export type LinearElement = Extract<CanvasElement, { type: "line" | "arrow" }>;
@@ -17,17 +10,13 @@ export type LinearElement = Extract<CanvasElement, { type: "line" | "arrow" }>;
 export const isLinear = (element: CanvasElement): element is LinearElement =>
   element.type === "line" || element.type === "arrow";
 
-/** Handle hit radius per input type. Larger than the drawn handle so fingers can grab it. */
 export function handleHitRadius(pointerType: string): number {
   return pointerType === "mouse" ? 8 : 18;
 }
 
-/** What the selection UI shows for the current selection. */
 export type SelectionFrame =
   | { kind: "none" }
-  /** A single line / arrow: two endpoint handles, no box handles */
   | { kind: "endpoints"; element: LinearElement }
-  /** Anything else: one padded box with eight resize handles */
   | { kind: "box"; bounds: Bounds; frame: Bounds };
 
 export function selectionFrame(selected: readonly CanvasElement[]): SelectionFrame {
@@ -48,7 +37,6 @@ export function padBounds(bounds: Bounds, padding: number): Bounds {
   };
 }
 
-/** Handle positions on a frame. Corners first so they win over edges where they overlap. */
 export function handlePositions(frame: Bounds): [HandleId, Point][] {
   const { x, y, width, height } = frame;
   const cx = x + width / 2;
@@ -65,7 +53,6 @@ export function handlePositions(frame: Bounds): [HandleId, Point][] {
   ];
 }
 
-/** Edge handles are hidden on boxes too small to fit them without crowding the corners. */
 const MIN_FRAME_FOR_EDGE_HANDLES = 32;
 
 export function visibleHandles(frame: Bounds): [HandleId, Point][] {
@@ -97,16 +84,12 @@ export function hitEndpoint(element: LinearElement, point: Point, radius: number
   return nearest<EndpointId>([["start", element.start], ["end", element.end]], point, radius);
 }
 
-// ---------------------------------------------------------------- decisions
-
 export interface PointerDownInput {
   elements: readonly CanvasElement[];
   selectedIds: readonly string[];
   point: Point;
   shiftKey: boolean;
-  /** Stroke hit tolerance (see hitTolerance) */
   tolerance: number;
-  /** Handle hit radius (see handleHitRadius) */
   handleRadius: number;
 }
 
@@ -114,19 +97,9 @@ export type PointerDownDecision =
   | { action: "endpoint"; elementId: string; endpoint: EndpointId }
   | { action: "resize"; handle: HandleId; selectedIds: string[] }
   | { action: "move"; selectedIds: string[] }
-  /** Selection changed (Shift-click removed an element); nothing to drag */
   | { action: "select"; selectedIds: string[] }
   | { action: "marquee"; baseSelection: string[] };
 
-/**
- * What a selection-tool pointerdown should do, in priority order:
- *   1. a handle of the current selection   → resize / edit endpoint
- *   2. an element (topmost wins)
- *        Shift: toggle it in the selection; drag only if it is now selected
- *        else:  select it unless already selected, then move the selection
- *   3. inside the current selection's box  → move the selection
- *   4. empty canvas                        → marquee (Shift adds to the selection)
- */
 export function decidePointerDown(input: PointerDownInput): PointerDownDecision {
   const { elements, selectedIds, point, shiftKey, tolerance, handleRadius } = input;
   const selected = elements.filter((element) => selectedIds.includes(element.id));
@@ -159,8 +132,6 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
   return { action: "marquee", baseSelection: shiftKey ? [...selectedIds] : [] };
 }
 
-// ---------------------------------------------------------------- cursors
-
 export type CanvasCursor =
   | "default"
   | "move"
@@ -181,10 +152,6 @@ const HANDLE_CURSORS: Record<HandleId, CanvasCursor> = {
   w: "ew-resize",
 };
 
-/**
- * Cursor that previews what a pointerdown would do. Uses the same decision
- * as an actual press, so hover feedback can never disagree with the action.
- */
 export function cursorForDecision(decision: PointerDownDecision): CanvasCursor {
   switch (decision.action) {
     case "resize":

@@ -18,11 +18,6 @@ import { useWorkspaceStore } from "../store/workspaceStore";
 
 type SvgPointerEvent = ReactPointerEvent<SVGSVGElement>;
 
-/**
- * The single gesture in progress. Only its pointer may update or finish it.
- * Transform gestures keep the untouched originals so every frame is computed
- * from the start of the drag (no accumulated rounding) and cancelling is free.
- */
 type Gesture =
   | { kind: "draw"; pointerId: number; draft: DrawingDraft }
   | { kind: "move"; pointerId: number; origin: Point; originals: CanvasElement[] }
@@ -32,7 +27,6 @@ type Gesture =
 
 type TransformGesture = Extract<Gesture, { kind: "move" | "resize" | "endpoint" }>;
 
-/** Pointer samples for this event in world coordinates, including coalesced ones. */
 function worldSamples(event: SvgPointerEvent): Point[] {
   const toWorld = createScreenToWorld(event.currentTarget);
   if (!toWorld) return [];
@@ -49,7 +43,6 @@ function worldSamples(event: SvgPointerEvent): Point[] {
   return samples;
 }
 
-/** The elements a transform gesture produces when the pointer is at `point`. */
 function transformedElements(gesture: TransformGesture, point: Point): CanvasElement[] {
   const dx = point.x - gesture.origin.x;
   const dy = point.y - gesture.origin.y;
@@ -70,20 +63,6 @@ function transformedElements(gesture: TransformGesture, point: Point): CanvasEle
 
 const toPreviewMap = (elements: readonly CanvasElement[]) => new Map(elements.map((element) => [element.id, element]));
 
-/**
- * Shared pointer lifecycle for every canvas interaction:
- *   drawing tools  → draw
- *   selection tool → move / resize / edit endpoint / marquee (see decidePointerDown)
- *
- *   pointerdown  → start one gesture (primary button only; extra pointers are ignored)
- *   pointermove  → update it (same pointer only)
- *   pointerup    → commit it to the store, exactly once
- *   pointercancel / lostpointercapture / tool switch → discard the unfinished gesture only
- *
- * The gesture lives in a ref, so every check is synchronous and never acts
- * on stale render state. React state holds only what has to render:
- * the drawing draft, transform preview and marquee rectangle.
- */
 export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   const [draft, setDraft] = useState<DrawingDraft | null>(null);
   const [preview, setPreview] = useState<Map<string, CanvasElement> | null>(null);
@@ -98,18 +77,16 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     setMarquee(null);
   }, []);
 
-  /** Discards the unfinished gesture. Committed elements are never touched. */
   const abortGesture = useCallback(() => {
     const gesture = gestureRef.current;
     if (!gesture) return;
     if (gesture.kind === "marquee") useWorkspaceStore.getState().setSelection(gesture.previousSelection);
 
-    clearTransient(); // cleared first, so the lostpointercapture below is ignored
+    clearTransient();
     const svg = svgRef.current;
     if (svg?.hasPointerCapture(gesture.pointerId)) svg.releasePointerCapture(gesture.pointerId);
   }, [clearTransient, svgRef]);
 
-  // Switching tools mid-gesture (e.g. a second finger taps the toolbar) cancels the gesture.
   useEffect(
     () =>
       useWorkspaceStore.subscribe((state, previous) => {
@@ -123,7 +100,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     return gesture && gesture.pointerId === event.pointerId ? gesture : null;
   };
 
-  /** What a selection-tool press at `point` would do (pure — no side effects). */
   const decide = (event: SvgPointerEvent, point: Point) => {
     const store = useWorkspaceStore.getState();
     return decidePointerDown({
@@ -136,22 +112,16 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     });
   };
 
-  /**
-   * Hover feedback for mouse / pen: resize arrows on handles, move inside the
-   * selection or over an element, grab on line endpoints. Not updated while
-   * a gesture runs, so the cursor stays the one the drag started with.
-   */
   const updateHoverCursor = (event: SvgPointerEvent) => {
-    if (event.pointerType === "touch") return; // no hover on touch
+    if (event.pointerType === "touch") return;
     const point = worldSamples(event).at(-1);
     const next =
       point && useWorkspaceStore.getState().activeTool === "selection"
         ? cursorForDecision(decide(event, point))
         : "default";
-    setCursor(next); // same value → React skips the render
+    setCursor(next);
   };
 
-  /** Starts a selection-tool gesture. Returns null when nothing should be dragged. */
   function startSelectionGesture(event: SvgPointerEvent, point: Point): Gesture | null {
     const store = useWorkspaceStore.getState();
     const decision = decide(event, point);
@@ -184,7 +154,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     }
   }
 
-  /** Applies the latest pointer position to the gesture's live preview. */
   function updateGesture(gesture: Gesture, samples: Point[]) {
     const point = samples[samples.length - 1];
     if (!point) return;
@@ -192,7 +161,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     switch (gesture.kind) {
       case "draw": {
         const next = updateDraft(gesture.draft, samples);
-        if (next === gesture.draft) return; // nothing visible changed — skip the render
+        if (next === gesture.draft) return;
         gesture.draft = next;
         setDraft(next);
         return;
@@ -210,7 +179,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   }
 
   const onPointerDown = (event: SvgPointerEvent) => {
-    if (gestureRef.current) return; // an interaction is already in progress — ignore extra pointers
+    if (gestureRef.current) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
     const [point] = worldSamples(event);
@@ -221,7 +190,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     if (isDrawingTool(activeTool)) {
       gesture = { kind: "draw", pointerId: event.pointerId, draft: startDraft(activeTool, point) };
     } else if (activeTool === "selection") {
-      updateHoverCursor(event); // set the drag's cursor even if no hover preceded the press
+      updateHoverCursor(event);
       gesture = startSelectionGesture(event, point);
     }
     if (!gesture) return;
@@ -229,7 +198,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
-      return; // the pointer is no longer active (e.g. already released)
+      return;
     }
 
     gestureRef.current = gesture;
@@ -246,7 +215,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     if (!gestureRef.current) setCursor("default");
   };
 
-  /** Writes a finished gesture's result to the store. */
   function commitGesture(gesture: Gesture, samples: Point[]) {
     const store = useWorkspaceStore.getState();
     const point = samples[samples.length - 1];
@@ -258,9 +226,9 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
         return;
       }
       case "marquee":
-        return; // selection was already applied live
+        return;
       default: {
-        if (!point || (point.x === gesture.origin.x && point.y === gesture.origin.y)) return; // a click, not a drag
+        if (!point || (point.x === gesture.origin.x && point.y === gesture.origin.y)) return;
         store.updateElements(transformedElements(gesture, point));
       }
     }
@@ -271,23 +239,19 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     if (!gesture) return;
 
     const samples = worldSamples(event);
-    clearTransient(); // cleared before committing, so nothing can commit twice
+    clearTransient();
     commitGesture(gesture, samples);
-    updateHoverCursor(event); // the store now holds the result, so hover reflects it
+    updateHoverCursor(event);
   };
 
-  /** pointercancel, or capture lost before pointerup: drop the unfinished gesture only. */
   const onPointerAbort = (event: SvgPointerEvent) => {
     if (gestureFor(event)) abortGesture();
   };
 
   return {
     draft,
-    /** Live geometry of elements being moved / resized, keyed by id */
     preview,
-    /** Marquee rectangle while dragging one */
     marquee,
-    /** Hover cursor for the selection tool (mouse / pen) */
     cursor,
     handlers: {
       onPointerDown,

@@ -7,17 +7,6 @@ import {
   type Bounds,
 } from "./geometry.ts";
 
-/*
- * Pure hit testing — no React, no DOM. Everything is in world units.
- *
- * Rule (matches Excalidraw): a shape with a transparent fill is hit on its
- * stroke only, so clicking the empty middle of a large rectangle reaches
- * whatever is underneath it (or starts a marquee). A shape with a real
- * fill is also hit anywhere inside. Open shapes (line, arrow, freehand)
- * are always hit on their stroke.
- */
-
-/** Extra hit distance beyond the stroke, per input type. Fingers get more. */
 export function hitTolerance(pointerType: string): number {
   return pointerType === "mouse" ? 6 : 12;
 }
@@ -30,7 +19,6 @@ export function distanceToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-/** Shortest distance from `p` to an open polyline (or a closed one when `closed`). */
 export function distanceToPolyline(p: Point, points: readonly Point[], closed = false): number {
   if (points.length === 0) return Infinity;
   if (points.length === 1) return Math.hypot(p.x - points[0]!.x, p.y - points[0]!.y);
@@ -43,7 +31,6 @@ export function distanceToPolyline(p: Point, points: readonly Point[], closed = 
   return best;
 }
 
-/** Point-in-polygon (even–odd rule). */
 function insidePolygon(p: Point, polygon: readonly Point[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -58,7 +45,6 @@ function insidePolygon(p: Point, polygon: readonly Point[]): boolean {
 
 const ELLIPSE_SEGMENTS = 64;
 
-/** Ellipse outline as a polygon — accurate to well under a pixel at whiteboard sizes. */
 function ellipseOutline(cx: number, cy: number, rx: number, ry: number): Point[] {
   return Array.from({ length: ELLIPSE_SEGMENTS }, (_, i) => {
     const angle = (i / ELLIPSE_SEGMENTS) * Math.PI * 2;
@@ -77,7 +63,6 @@ function rectangleOutline({ x, y, width, height }: Bounds): Point[] {
 
 const isFilled = (element: CanvasElement) => element.style.fill !== "transparent" && element.style.fill !== "none";
 
-/** True when `point` touches the element, within its stroke plus `tolerance`. */
 export function hitTestElement(element: CanvasElement, point: Point, tolerance: number): boolean {
   const reach = element.style.strokeWidth / 2 + tolerance;
 
@@ -102,7 +87,6 @@ export function hitTestElement(element: CanvasElement, point: Point, tolerance: 
   }
 }
 
-/** The topmost (last rendered) element under `point`, or null. */
 export function topmostElementAt(
   elements: readonly CanvasElement[],
   point: Point,
@@ -115,7 +99,6 @@ export function topmostElementAt(
   return null;
 }
 
-/** Geometric bounding box of an element (stroke not included). */
 export function elementBounds(element: CanvasElement): Bounds {
   switch (element.type) {
     case "rectangle":
@@ -131,7 +114,6 @@ export function elementBounds(element: CanvasElement): Bounds {
   }
 }
 
-/** Union of several boxes, or null for none. */
 export function unionBounds(boxes: readonly Bounds[]): Bounds | null {
   if (boxes.length === 0) return null;
   let minX = Infinity;
@@ -156,7 +138,6 @@ export function boundsContainPoint(bounds: Bounds, point: Point, padding = 0): b
   );
 }
 
-/** True when `inner` lies completely inside `outer`. */
 export function boundsContain(outer: Bounds, inner: Bounds): boolean {
   return (
     inner.x >= outer.x &&
@@ -166,11 +147,6 @@ export function boundsContain(outer: Bounds, inner: Bounds): boolean {
   );
 }
 
-/**
- * Marquee rule: an element is selected when its whole bounding box is
- * inside the marquee (like Excalidraw / Figma). Containment is predictable
- * on a dense board and never grabs a large background shape by accident.
- */
 export function elementsInMarquee(elements: readonly CanvasElement[], marquee: Bounds): string[] {
   return elements.filter((element) => boundsContain(marquee, elementBounds(element))).map((element) => element.id);
 }

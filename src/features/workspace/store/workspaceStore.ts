@@ -2,38 +2,19 @@ import { create } from "zustand";
 import type { CanvasElement } from "../canvas/elements.ts";
 import type { ToolId } from "../data/tools.ts";
 
-/*
- * Workspace store: the board document and editing state shared across the
- * canvas, toolbar, keyboard shortcuts and selection actions.
- *
- * Deliberately NOT in here:
- *   - transient pointer state (active pointer, drag origin, live previews)
- *     → lives in useCanvasInteraction and is committed once per gesture
- *   - geometry / hit testing → pure modules in ../canvas
- *
- * All document changes go through addElement / updateElements /
- * deleteElements, which is the seam future undo/redo, persistence and
- * collaboration will wrap.
- */
-
 export interface WorkspaceState {
-  /** Render order: later elements are drawn on top. */
   elements: CanvasElement[];
-  /** Ids of selected elements, in selection order. */
   selectedIds: string[];
   activeTool: ToolId;
 }
 
 export interface WorkspaceActions {
   addElement: (element: CanvasElement) => void;
-  /** Replaces elements by id; ids that no longer exist are ignored. */
   updateElements: (updated: readonly CanvasElement[]) => void;
   deleteElements: (ids: readonly string[]) => void;
-  /** Deletes the selection and clears it. Returns how many were deleted. */
   deleteSelected: () => number;
   setSelection: (ids: readonly string[]) => void;
   clearSelection: () => void;
-  /** Switching away from the selection tool clears the selection. */
   setActiveTool: (tool: ToolId) => void;
 }
 
@@ -78,7 +59,6 @@ export const createWorkspaceStore = () =>
     },
 
     setSelection: (ids) => {
-      // Keep only ids that exist, and skip the update when nothing changed.
       const existing = new Set(get().elements.map((element) => element.id));
       const next = ids.filter((id, index) => existing.has(id) && ids.indexOf(id) === index);
       if (!sameIds(next, get().selectedIds)) set({ selectedIds: next });
@@ -95,5 +75,4 @@ export const createWorkspaceStore = () =>
       })),
   }));
 
-/** The app's workspace store. Tests can build isolated ones with createWorkspaceStore(). */
 export const useWorkspaceStore = createWorkspaceStore();

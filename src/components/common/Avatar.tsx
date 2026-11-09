@@ -7,9 +7,7 @@ interface AvatarProps {
   name: string;
   tone?: AvatarTone;
   size?: AvatarSize;
-  /** Adds a ring matching the surrounding surface — used in stacks */
   ringed?: boolean;
-  /** Small presence dot in the corner */
   online?: boolean;
   className?: string;
 }
@@ -38,7 +36,14 @@ function initialsOf(name: string) {
     .join("");
 }
 
-export function Avatar({ name, tone = "teal", size = "md", ringed, online, className }: AvatarProps) {
+export function Avatar({
+  name,
+  tone = "teal",
+  size = "md",
+  ringed,
+  online,
+  className,
+}: AvatarProps) {
   return (
     <span className={cn("relative inline-flex shrink-0", className)}>
       <span
@@ -76,11 +81,22 @@ interface AvatarStackProps {
   className?: string;
 }
 
-export function AvatarStack({ people, extra, size = "sm", className }: AvatarStackProps) {
+export function AvatarStack({
+  people,
+  extra,
+  size = "sm",
+  className,
+}: AvatarStackProps) {
   return (
     <div className={cn("flex items-center -space-x-1.5", className)}>
       {people.map((person) => (
-        <Avatar key={person.name} name={person.name} tone={person.tone} size={size} ringed />
+        <Avatar
+          key={person.name}
+          name={person.name}
+          tone={person.tone}
+          size={size}
+          ringed
+        />
       ))}
       {extra ? (
         <span
