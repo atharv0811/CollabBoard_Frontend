@@ -243,7 +243,7 @@ function createPage(browser, { url, mode }) {
   }
 
   async function mouseClickDrag(from, to, button, { shift = false } = {}) {
-    const buttons = button === "right" ? 2 : 1;
+    const buttons = { left: 1, right: 2, middle: 4 }[button];
     const modifiers = shift ? 8 : 0;
     await send("Input.dispatchMouseEvent", { type: "mousePressed", x: from.x, y: from.y, button, buttons, clickCount: 1, modifiers });
     for (let step = 1; step <= 6; step++) {
@@ -304,6 +304,43 @@ function createPage(browser, { url, mode }) {
     return evaluate(`getComputedStyle(document.querySelector('${CANVAS}')).cursor`);
   }
 
+  /** Wheel event at `point` (mouse wheel by default; ctrl simulates trackpad pinch). */
+  async function wheel(point, { deltaX = 0, deltaY = 0, ctrl = false } = {}) {
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseWheel", x: point.x, y: point.y, deltaX, deltaY, modifiers: ctrl ? 2 : 0,
+    });
+    await sleep(80);
+  }
+
+  /** Clicks / taps the visible button with this aria-label (toolbar or zoom controls). */
+  async function press(label) {
+    // Chrome suppresses the click of a tap that follows a drag too closely (measured:
+    // lost at 400ms after a pan, delivered at 800ms+), so pause like a person would.
+    await sleep(800);
+    await click(await toolCenter(label));
+  }
+
+  /** Viewport as rendered: zoom % from the controls, and the SVG viewBox. */
+  async function view() {
+    return evaluate(`(() => {
+      const svg = document.querySelector('${CANVAS}');
+      const [x, y, width, height] = (svg.getAttribute('viewBox') ?? '').split(' ').map(Number);
+      const level = [...document.querySelectorAll('[data-zoom-level]')].find((el) => el.offsetParent);
+      return { percent: Number(level?.getAttribute('data-zoom-level')), viewBox: { x, y, width, height }, size: { width: svg.clientWidth, height: svg.clientHeight } };
+    })()`);
+  }
+
+  /** On-screen boxes (client px) of committed elements, and of drawn handles. */
+  async function screenBoxes() {
+    return evaluate(`(() => {
+      const box = (el) => { const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
+      return {
+        elements: [...document.querySelectorAll('${CANVAS} [data-shape-id]')].map(box),
+        handles: [...document.querySelectorAll('${CANVAS} [data-handle]')].map(box),
+      };
+    })()`);
+  }
+
   async function key(name) {
     const codes = { Delete: 46, Backspace: 8, Escape: 27 };
     for (const type of ["keyDown", "keyUp"]) {
@@ -316,6 +353,7 @@ function createPage(browser, { url, mode }) {
     open, drag, selectTool, shapes, elements, geometry, resize, touchEvent, toolCenter,
     dropPointerCapture, mouseClickDrag, pointerDown, pointerMove, pointerUp, touch,
     selection, click, key, evaluate, hover, canvasCursor,
+    wheel, press, view, screenBoxes, send,
   };
 }
 
@@ -997,7 +1035,307 @@ function defineTests(page, mode) {
         expect({ lineBody: await page.hover({ x: 340, y: 527 }) }, { lineBody: "move" });
       },
     },
+
+    // ---- Milestone 4: infinite canvas navigation
+
+    {
+      name: "V1: Hand tool pans the view; elements keep their world geometry and new drawings land under the pointer",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const before = (await page.screenBoxes()).elements[0];
+        const worldBefore = (await page.elements())[0];
+
+        expect({ hand: await page.selectTool("Hand (pan)") }, { hand: true });
+        await page.drag(spots.empty, { x: spots.empty.x + 60, y: spots.empty.y - 40 });
+        nearBox(fail, "after pan", (await page.screenBoxes()).elements[0], shiftedBox(before, 60, -40));
+        nearDeep(fail, "world geometry", (await page.elements())[0], worldBefore);
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+        const { viewBox } = await page.view();
+        near(fail, "viewBox x", viewBox.x, -60);
+        near(fail, "viewBox y", viewBox.y, 40);
+
+        await page.selectTool("Rectangle");
+        await page.drag(...spots.rect2);
+        nearBox(fail, "drawn after pan", (await page.screenBoxes()).elements[1], boxOf(...spots.rect2));
+      },
+    },
+    {
+      name: "V2: middle-mouse drag pans with any tool and never draws",
+      skip: touchOnly && "mouse only",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const before = (await page.screenBoxes()).elements[0];
+        await page.mouseClickDrag(spots.empty, { x: spots.empty.x - 80, y: spots.empty.y + 30 }, "middle");
+        nearBox(fail, "after middle-drag", (await page.screenBoxes()).elements[0], shiftedBox(before, -80, 30));
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+      },
+    },
+    {
+      name: "V3: wheel zooms towards the pointer; Ctrl+wheel zooms; trackpad scroll pans; the page never scrolls",
+      skip: touchOnly && "needs a wheel",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const anchor = { x: 700, y: 420 };
+
+        let before = (await page.screenBoxes()).elements[0];
+        let v0 = await page.view();
+        await page.wheel(anchor, { deltaY: -100 });
+        let v1 = await page.view();
+        const k = v0.viewBox.width / v1.viewBox.width;
+        if (!(k > 1.05)) fail(`wheel up should zoom in, ratio ${k}`);
+        if (!(v1.percent > 100)) fail(`zoom % ${v1.percent}`);
+        nearBox(fail, "zoomed around the pointer", (await page.screenBoxes()).elements[0], scaledBox(before, anchor, k));
+
+        before = (await page.screenBoxes()).elements[0];
+        await page.wheel(anchor, { deltaY: 100 });
+        v0 = v1;
+        v1 = await page.view();
+        const kOut = v0.viewBox.width / v1.viewBox.width;
+        if (!(kOut < 0.95)) fail(`wheel down should zoom out, ratio ${kOut}`);
+        nearBox(fail, "zoomed out around the pointer", (await page.screenBoxes()).elements[0], scaledBox(before, anchor, kOut));
+
+        v0 = await page.view();
+        await page.wheel(anchor, { deltaY: -10, ctrl: true });
+        if (!((await page.view()).viewBox.width < v0.viewBox.width)) fail("Ctrl+wheel (trackpad pinch) should zoom in");
+
+        before = (await page.screenBoxes()).elements[0];
+        v0 = await page.view();
+        await page.wheel(anchor, { deltaX: 5.5, deltaY: 12.5 });
+        near(fail, "trackpad scroll keeps zoom", (await page.view()).viewBox.width, v0.viewBox.width, 0.001);
+        nearBox(fail, "trackpad scroll pans", (await page.screenBoxes()).elements[0], shiftedBox(before, -5.5, -12.5));
+
+        expect({ pageScroll: await page.evaluate("window.scrollX + window.scrollY") }, { pageScroll: 0 });
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+      },
+    },
+    {
+      name: "V4: zoom buttons, percentage, reset, and fit content (with and without content)",
+      async run(expect, fail) {
+        const percent = async () => (await page.view()).percent;
+        expect({ start: await percent() }, { start: 100 });
+        await page.press("Zoom in");
+        expect({ in1: await percent() }, { in1: 120 });
+        await page.press("Zoom in");
+        expect({ in2: await percent() }, { in2: 144 });
+        await page.press("Zoom out");
+        expect({ out: await percent() }, { out: 120 });
+        await page.press("Reset zoom");
+        expect({ reset: await percent() }, { reset: 100 });
+
+        // Content panned off-screen comes back with Fit content.
+        const spots = navSpots(mode);
+        await page.selectTool("Rectangle");
+        await page.drag(...spots.rect);
+        await page.selectTool("Hand (pan)");
+        await page.drag(...spots.panAway);
+        const away = (await page.screenBoxes()).elements[0];
+        if (!(away.x + away.w < 0 || away.y + away.h < 0)) fail(`content should be off-screen before fit: ${JSON.stringify(away)}`);
+
+        await page.press("Fit content");
+        const { size, percent: fitPercent } = await page.view();
+        const fitted = (await page.screenBoxes()).elements[0];
+        if (fitPercent > 100) fail(`fit should not enlarge small content (${fitPercent}%)`);
+        near(fail, "fit centres content x", fitted.x + fitted.w / 2, size.width / 2);
+        near(fail, "fit centres content y", fitted.y + fitted.h / 2, size.height / 2);
+
+        // Empty board: fit returns to the default view.
+        await page.open();
+        await page.selectTool("Hand (pan)");
+        await page.drag(...spots.panAway);
+        await page.press("Fit content");
+        const empty = await page.view();
+        expect({ x: empty.viewBox.x, y: empty.viewBox.y, percent: empty.percent }, { x: 0, y: 0, percent: 100 });
+      },
+    },
+    {
+      name: "V5: at 207% zoom, drawing, selecting, moving, resizing and endpoint editing all track the pointer",
+      async run(expect, fail) {
+        for (let i = 0; i < 4; i++) await page.press("Zoom in");
+        const { percent, size, viewBox } = await page.view();
+        expect({ percent }, { percent: 207 });
+        const zoom = size.width / viewBox.width;
+        const spots = navSpots(mode);
+
+        await page.selectTool("Rectangle");
+        await page.drag(...spots.rect);
+        let box = (await page.screenBoxes()).elements[0];
+        nearBox(fail, "drawn", box, boxOf(...spots.rect));
+        near(fail, "stored in world units", (await page.elements())[0].width, (spots.rect[1].x - spots.rect[0].x) / zoom, 0.6);
+
+        await page.selectTool("Select");
+        const grab = { x: spots.rect[0].x + (spots.rect[1].x - spots.rect[0].x) / 4, y: spots.rect[0].y };
+        await page.click(grab);
+        expect({ selected: (await page.selection()).ids.length }, { selected: 1 });
+        for (const handle of (await page.screenBoxes()).handles) {
+          if (handle.w < 8 || handle.w > 10) fail(`handle should stay ~9px on screen at any zoom, got ${handle.w}`);
+        }
+
+        await page.drag(grab, { x: grab.x + 40, y: grab.y + 30 });
+        const moved = (await page.screenBoxes()).elements[0];
+        nearBox(fail, "moved", moved, shiftedBox(box, 40, 30));
+
+        const se = (await page.selection()).handles.se;
+        await page.drag(se, { x: se.x + 40, y: se.y + 20 });
+        box = (await page.screenBoxes()).elements[0];
+        nearBox(fail, "resized", box, { ...moved, w: moved.w + 40, h: moved.h + 20 });
+
+        await page.selectTool("Line");
+        await page.drag(...spots.line);
+        await page.selectTool("Select");
+        await page.click(midpoint(...spots.line));
+        const { endpoints } = await page.selection();
+        if (!endpoints.end) return fail("no endpoint handles at this zoom");
+        await page.drag(endpoints.end, { x: endpoints.end.x + 30, y: endpoints.end.y - 20 });
+        const after = (await page.selection()).endpoints;
+        nearDeep(fail, "start unchanged", after.start, endpoints.start);
+        nearDeep(fail, "end follows the pointer", after.end, { x: endpoints.end.x + 30, y: endpoints.end.y - 20 });
+      },
+    },
+    {
+      name: "V6: pinch zooms around the fingers' midpoint; two-finger drag pans; neither draws",
+      skip: !touchOnly && "multi-touch only",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect); // rectangle tool stays active during the pinch
+        let before = (await page.screenBoxes()).elements[0];
+        const v0 = await page.view();
+
+        const mid = { x: 200, y: 540 };
+        await pinch(page, [{ x: 150, y: 540 }, { x: 250, y: 540 }], [{ x: 100, y: 540 }, { x: 300, y: 540 }]);
+        const k = v0.viewBox.width / (await page.view()).viewBox.width;
+        near(fail, "pinch ratio", k, 2, 0.02);
+        nearBox(fail, "zoomed around the midpoint", (await page.screenBoxes()).elements[0], scaledBox(before, mid, k));
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+
+        before = (await page.screenBoxes()).elements[0];
+        const v1 = await page.view();
+        await pinch(page, [{ x: 100, y: 540 }, { x: 300, y: 540 }], [{ x: 140, y: 570 }, { x: 340, y: 570 }]);
+        near(fail, "two-finger pan keeps zoom", (await page.view()).viewBox.width, v1.viewBox.width, 0.01);
+        nearBox(fail, "two-finger pan", (await page.screenBoxes()).elements[0], shiftedBox(before, 40, 30));
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+      },
+    },
+    {
+      name: "V7: a pinch never selects, moves or draws — even if the first finger landed on a shape",
+      skip: !touchOnly && "multi-touch only",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const world = (await page.elements())[0];
+
+        await page.selectTool("Select");
+        const onStroke = { x: spots.rect[0].x + 30, y: spots.rect[0].y };
+        await pinch(page, [onStroke, { x: onStroke.x + 120, y: onStroke.y + 200 }], [{ x: onStroke.x - 20, y: onStroke.y - 20 }, { x: onStroke.x + 150, y: onStroke.y + 240 }]);
+        expect({ selected: (await page.selection()).ids.length }, { selected: 0 });
+        nearDeep(fail, "shape not moved", (await page.elements())[0], world);
+
+        await page.selectTool("Ellipse");
+        await pinch(page, [{ x: 120, y: 520 }, { x: 260, y: 560 }], [{ x: 90, y: 500 }, { x: 300, y: 600 }]);
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+      },
+    },
+    {
+      name: "V8: cancelled or half-lifted pinches clean up; the next one-finger drawing works",
+      skip: !touchOnly && "multi-touch only",
+      async run(expect, fail) {
+        const A = (x, y) => ({ id: 0, x, y });
+        const B = (x, y) => ({ id: 1, x, y });
+
+        // Cancelled mid-pinch.
+        await page.touchEvent("touchStart", [A(150, 540)]);
+        await page.touchEvent("touchStart", [A(150, 540), B(250, 540)]);
+        await sleep(16);
+        await page.touchEvent("touchMove", [A(130, 540), B(270, 540)]);
+        await page.touchEvent("touchCancel", []);
+        await sleep(100);
+
+        // One finger lifts; the other keeps moving — it must not start drawing.
+        await page.touchEvent("touchStart", [A(150, 540)]);
+        await page.touchEvent("touchStart", [A(150, 540), B(250, 540)]);
+        await sleep(16);
+        await page.touchEvent("touchEnd", [B(250, 540)]);
+        for (let i = 1; i <= 4; i++) {
+          await sleep(16);
+          await page.touchEvent("touchMove", [A(150 + i * 20, 540 - i * 15)]);
+        }
+        await page.touchEvent("touchEnd", [A(230, 480)]);
+        await sleep(120);
+        expect(await page.shapes(), { committed: 0, preview: 0 });
+
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+        nearBox(fail, "next drawing", (await page.screenBoxes()).elements[0], boxOf(...spots.rect));
+      },
+    },
+    {
+      name: "V9: a touch whose pointerup was never delivered cannot turn later drawings into pinches",
+      skip: !touchOnly && "touch only",
+      async run(expect, fail) {
+        // A secondary touch goes down and its pointerup / pointercancel never arrives.
+        await page.evaluate(`document.querySelector('${CANVAS}').dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true, pointerId: 99, pointerType: 'touch', isPrimary: false, clientX: 300, clientY: 600, button: 0, buttons: 1,
+        }))`);
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect); // a normal one-finger drawing (primary touch)
+        expect(await page.shapes(), { committed: 1, preview: 0 });
+        nearBox(fail, "drawn", (await page.screenBoxes()).elements[0], boxOf(...spots.rect));
+      },
+    },
   ];
+}
+
+// --------------------------------------------------- navigation test helpers
+
+/** Fixed spots for the navigation tests, clear of the floating UI. */
+function navSpots(mode) {
+  return mode === "desktop"
+    ? {
+        rect: [{ x: 500, y: 300 }, { x: 650, y: 400 }],
+        rect2: [{ x: 300, y: 500 }, { x: 420, y: 600 }],
+        line: [{ x: 420, y: 480 }, { x: 640, y: 600 }],
+        empty: { x: 900, y: 550 },
+        panAway: [{ x: 900, y: 550 }, { x: 100, y: 120 }],
+      }
+    : {
+        rect: [{ x: 100, y: 200 }, { x: 220, y: 300 }],
+        rect2: [{ x: 60, y: 380 }, { x: 180, y: 460 }],
+        line: [{ x: 80, y: 340 }, { x: 260, y: 440 }],
+        empty: { x: 250, y: 450 },
+        panAway: [{ x: 300, y: 560 }, { x: 40, y: 130 }],
+      };
+}
+
+const boxOf = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) });
+const shiftedBox = (box, dx, dy) => ({ ...box, x: box.x + dx, y: box.y + dy });
+/** A box scaled by `k` around screen point `m` (what zooming about m does to it). */
+const scaledBox = (box, m, k) => ({ x: m.x + (box.x - m.x) * k, y: m.y + (box.y - m.y) * k, w: box.w * k, h: box.h * k });
+const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+function nearBox(fail, label, actual, expected, tolerance = 1.5) {
+  if (!actual) return fail(`${label}: element missing`);
+  for (const key of ["x", "y", "w", "h"]) near(fail, `${label} ${key}`, actual[key], expected[key], tolerance);
+}
+
+/** Two fingers land (almost) together and move from `from` to `to` in steps, then lift. */
+async function pinch(page, from, to) {
+  const finger = (id, p) => ({ id, x: p.x, y: p.y });
+  await page.touchEvent("touchStart", [finger(0, from[0])]);
+  await sleep(16);
+  await page.touchEvent("touchStart", [finger(0, from[0]), finger(1, from[1])]);
+  const steps = 6;
+  for (let s = 1; s <= steps; s++) {
+    await sleep(16);
+    const at = (i) => ({ x: from[i].x + ((to[i].x - from[i].x) * s) / steps, y: from[i].y + ((to[i].y - from[i].y) * s) / steps });
+    await page.touchEvent("touchMove", [finger(0, at(0)), finger(1, at(1))]);
+  }
+  await sleep(16);
+  await page.touchEvent("touchEnd", [finger(1, to[1])]);
+  await page.touchEvent("touchEnd", [finger(0, to[0])]);
+  await sleep(120);
 }
 
 const DRAWING_TOOLS = [

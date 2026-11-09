@@ -3,6 +3,7 @@ import type { Bounds } from "./geometry.ts";
 import { boundsContainPoint, elementBounds, topmostElementAt, unionBounds } from "./hitTest.ts";
 import type { EndpointId, HandleId } from "./transform.ts";
 
+/** Screen px between the selected geometry and the drawn selection box (divided by zoom). */
 export const SELECTION_PADDING = 6;
 
 export type LinearElement = Extract<CanvasElement, { type: "line" | "arrow" }>;
@@ -19,13 +20,14 @@ export type SelectionFrame =
   | { kind: "endpoints"; element: LinearElement }
   | { kind: "box"; bounds: Bounds; frame: Bounds };
 
-export function selectionFrame(selected: readonly CanvasElement[]): SelectionFrame {
+/** `zoom` keeps the padding a constant size on screen. */
+export function selectionFrame(selected: readonly CanvasElement[], zoom = 1): SelectionFrame {
   const [only] = selected;
   if (!only) return { kind: "none" };
   if (selected.length === 1 && isLinear(only)) return { kind: "endpoints", element: only };
 
   const bounds = unionBounds(selected.map(elementBounds))!;
-  return { kind: "box", bounds, frame: padBounds(bounds, SELECTION_PADDING) };
+  return { kind: "box", bounds, frame: padBounds(bounds, SELECTION_PADDING / zoom) };
 }
 
 export function padBounds(bounds: Bounds, padding: number): Bounds {
@@ -55,10 +57,12 @@ export function handlePositions(frame: Bounds): [HandleId, Point][] {
 
 const MIN_FRAME_FOR_EDGE_HANDLES = 32;
 
-export function visibleHandles(frame: Bounds): [HandleId, Point][] {
+/** Edge handles need MIN_FRAME_FOR_EDGE_HANDLES screen px, so `zoom` is taken into account. */
+export function visibleHandles(frame: Bounds, zoom = 1): [HandleId, Point][] {
+  const minSize = MIN_FRAME_FOR_EDGE_HANDLES / zoom;
   return handlePositions(frame).filter(([id]) => {
-    if (id === "n" || id === "s") return frame.width >= MIN_FRAME_FOR_EDGE_HANDLES;
-    if (id === "e" || id === "w") return frame.height >= MIN_FRAME_FOR_EDGE_HANDLES;
+    if (id === "n" || id === "s") return frame.width >= minSize;
+    if (id === "e" || id === "w") return frame.height >= minSize;
     return true;
   });
 }
@@ -76,8 +80,8 @@ function nearest<T>(candidates: [T, Point][], point: Point, radius: number): T |
   return best;
 }
 
-export function hitHandle(frame: Bounds, point: Point, radius: number): HandleId | null {
-  return nearest(visibleHandles(frame), point, radius);
+export function hitHandle(frame: Bounds, point: Point, radius: number, zoom = 1): HandleId | null {
+  return nearest(visibleHandles(frame, zoom), point, radius);
 }
 
 export function hitEndpoint(element: LinearElement, point: Point, radius: number): EndpointId | null {
@@ -89,8 +93,12 @@ export interface PointerDownInput {
   selectedIds: readonly string[];
   point: Point;
   shiftKey: boolean;
+  /** Stroke hit tolerance in world units (screen tolerance ÷ zoom) */
   tolerance: number;
+  /** Handle hit radius in world units (screen radius ÷ zoom) */
   handleRadius: number;
+  /** Canvas px per world unit; keeps selection padding screen-constant. Default 1. */
+  zoom?: number;
 }
 
 export type PointerDownDecision =
@@ -101,15 +109,15 @@ export type PointerDownDecision =
   | { action: "marquee"; baseSelection: string[] };
 
 export function decidePointerDown(input: PointerDownInput): PointerDownDecision {
-  const { elements, selectedIds, point, shiftKey, tolerance, handleRadius } = input;
+  const { elements, selectedIds, point, shiftKey, tolerance, handleRadius, zoom = 1 } = input;
   const selected = elements.filter((element) => selectedIds.includes(element.id));
-  const frame = selectionFrame(selected);
+  const frame = selectionFrame(selected, zoom);
 
   if (frame.kind === "endpoints") {
     const endpoint = hitEndpoint(frame.element, point, handleRadius);
     if (endpoint) return { action: "endpoint", elementId: frame.element.id, endpoint };
   } else if (frame.kind === "box") {
-    const handle = hitHandle(frame.frame, point, handleRadius);
+    const handle = hitHandle(frame.frame, point, handleRadius, zoom);
     if (handle) return { action: "resize", handle, selectedIds: [...selectedIds] };
   }
 
@@ -125,7 +133,7 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
   }
 
   if (!shiftKey && frame.kind !== "none") {
-    const box = frame.kind === "box" ? frame.frame : padBounds(elementBounds(frame.element), SELECTION_PADDING);
+    const box = frame.kind === "box" ? frame.frame : padBounds(elementBounds(frame.element), SELECTION_PADDING / zoom);
     if (boundsContainPoint(box, point)) return { action: "move", selectedIds: [...selectedIds] };
   }
 
@@ -136,6 +144,7 @@ export type CanvasCursor =
   | "default"
   | "move"
   | "grab"
+  | "grabbing"
   | "nwse-resize"
   | "nesw-resize"
   | "ns-resize"

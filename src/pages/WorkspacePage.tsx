@@ -1,6 +1,7 @@
 import { CanvasContextBar } from "@/features/workspace/components/CanvasContextBar";
 import { CanvasSurface } from "@/features/workspace/components/CanvasSurface";
 import { StatusBar } from "@/features/workspace/components/StatusBar";
+import { ViewportControls } from "@/features/workspace/components/ViewportControls";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
 import { WorkspaceMenu } from "@/features/workspace/components/WorkspaceMenu";
 import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolbar";
@@ -31,12 +32,15 @@ export default function WorkspacePage() {
       {/* Top-right: header actions */}
       <WorkspaceHeader className="absolute top-(--workspace-gutter) right-(--workspace-gutter) z-(--z-panel)" />
 
-      {/* Bottom: hint / selection actions + toolbar on small screens */}
-      <div className="absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) flex flex-col items-center gap-3 lg:hidden">
-        <CanvasContextBar />
+      {/* Bottom: zoom controls, hint / selection actions + toolbar on small screens.
+          (On large screens the status bar holds the zoom controls.) */}
+      <div className="pointer-events-none absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) flex flex-col items-center gap-3 lg:hidden">
+        <ViewportControls className="self-end" />
+        <CanvasContextBar className="pointer-events-auto" />
         <WorkspaceToolbar
           activeTool={activeTool}
           onToolChange={setActiveTool}
+          className="pointer-events-auto"
         />
       </div>
 

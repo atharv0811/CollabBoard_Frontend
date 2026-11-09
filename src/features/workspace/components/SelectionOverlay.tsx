@@ -11,12 +11,21 @@ import {
 interface SelectionOverlayProps {
   selected: readonly CanvasElement[];
   marquee: Bounds | null;
+  /** Current zoom: overlay sizes are screen px, so they are divided by it. */
+  zoom: number;
 }
 
+/** Drawn handle size in screen px. */
 const HANDLE_SIZE = 9;
 
-export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
-  const frame = selectionFrame(selected);
+/** Overlay strokes keep a constant on-screen width at any zoom. */
+const screenStroke = { vectorEffect: "non-scaling-stroke" } as const;
+
+export function SelectionOverlay({ selected, marquee, zoom }: SelectionOverlayProps) {
+  const frame = selectionFrame(selected, zoom);
+  const px = (value: number) => value / zoom;
+  const dash = (on: number, off: number) => `${px(on)} ${px(off)}`;
+  const handle = px(HANDLE_SIZE);
 
   return (
     <g pointerEvents="none">
@@ -29,15 +38,16 @@ export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
             selected.map((element) => {
               const box = padBounds(
                 elementBounds(element),
-                SELECTION_PADDING / 2,
+                px(SELECTION_PADDING / 2),
               );
               return (
                 <rect
                   key={element.id}
                   {...box}
+                  {...screenStroke}
                   className="fill-none stroke-brand/60"
                   strokeWidth={1}
-                  strokeDasharray="4 3"
+                  strokeDasharray={dash(4, 3)}
                 />
               );
             })}
@@ -47,19 +57,21 @@ export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
               <rect
                 data-selection-box=""
                 {...frame.frame}
-                rx={2}
+                {...screenStroke}
+                rx={px(2)}
                 className="fill-none stroke-brand"
                 strokeWidth={1.25}
               />
-              {visibleHandles(frame.frame).map(([id, position]) => (
+              {visibleHandles(frame.frame, zoom).map(([id, position]) => (
                 <rect
                   key={id}
                   data-handle={id}
-                  x={position.x - HANDLE_SIZE / 2}
-                  y={position.y - HANDLE_SIZE / 2}
-                  width={HANDLE_SIZE}
-                  height={HANDLE_SIZE}
-                  rx={2}
+                  {...screenStroke}
+                  x={position.x - handle / 2}
+                  y={position.y - handle / 2}
+                  width={handle}
+                  height={handle}
+                  rx={px(2)}
                   className="fill-card stroke-brand"
                   strokeWidth={1.5}
                 />
@@ -75,16 +87,17 @@ export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
                 x2={frame.element.end.x}
                 y2={frame.element.end.y}
                 className="stroke-brand/40"
-                strokeWidth={frame.element.style.strokeWidth + 6}
+                strokeWidth={frame.element.style.strokeWidth + px(6)}
                 strokeLinecap="round"
               />
               {(["start", "end"] as const).map((endpoint) => (
                 <circle
                   key={endpoint}
                   data-endpoint={endpoint}
+                  {...screenStroke}
                   cx={frame.element[endpoint].x}
                   cy={frame.element[endpoint].y}
-                  r={HANDLE_SIZE / 2 + 1}
+                  r={handle / 2 + px(1)}
                   className="fill-card stroke-brand"
                   strokeWidth={1.5}
                 />
@@ -98,9 +111,10 @@ export function SelectionOverlay({ selected, marquee }: SelectionOverlayProps) {
         <rect
           data-marquee=""
           {...marquee}
+          {...screenStroke}
           className="fill-brand/8 stroke-brand"
           strokeWidth={1}
-          strokeDasharray="5 4"
+          strokeDasharray={dash(5, 4)}
         />
       )}
     </g>
