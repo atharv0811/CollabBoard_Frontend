@@ -341,6 +341,33 @@ function createPage(browser, { url, mode }) {
     })()`);
   }
 
+  /** Ctrl (or ⌘ with meta) + key, optionally with Shift — e.g. modKey("z", { shift: true }). */
+  async function modKey(letter, { shift = false, meta = false } = {}) {
+    const upper = letter.toUpperCase();
+    const modifiers = (meta ? 4 : 2) | (shift ? 8 : 0);
+    for (const type of ["keyDown", "keyUp"]) {
+      await send("Input.dispatchKeyEvent", {
+        type, modifiers, key: shift ? upper : letter, code: `Key${upper}`,
+        windowsVirtualKeyCode: upper.charCodeAt(0), nativeVirtualKeyCode: upper.charCodeAt(0),
+      });
+    }
+    await sleep(80);
+  }
+
+  /** Undo / redo depth and button state, as shown by the visible History toolbar. */
+  async function history() {
+    return evaluate(`(() => {
+      const bar = [...document.querySelectorAll('[aria-label="History"]')].find((el) => el.offsetParent);
+      const button = (label) => bar?.querySelector('button[aria-label="' + label + '"]');
+      return {
+        undo: Number(bar?.getAttribute('data-undo-depth')),
+        redo: Number(bar?.getAttribute('data-redo-depth')),
+        undoEnabled: !button('Undo')?.disabled,
+        redoEnabled: !button('Redo')?.disabled,
+      };
+    })()`);
+  }
+
   async function key(name) {
     const codes = { Delete: 46, Backspace: 8, Escape: 27 };
     for (const type of ["keyDown", "keyUp"]) {
@@ -353,7 +380,7 @@ function createPage(browser, { url, mode }) {
     open, drag, selectTool, shapes, elements, geometry, resize, touchEvent, toolCenter,
     dropPointerCapture, mouseClickDrag, pointerDown, pointerMove, pointerUp, touch,
     selection, click, key, evaluate, hover, canvasCursor,
-    wheel, press, view, screenBoxes, send,
+    wheel, press, view, screenBoxes, send, modKey, history,
   };
 }
 
@@ -1285,7 +1312,293 @@ function defineTests(page, mode) {
         nearBox(fail, "drawn", (await page.screenBoxes()).elements[0], boxOf(...spots.rect));
       },
     },
+
+    // ---- Milestone 5: undo / redo
+
+    {
+      name: "U1: each of the six element types is undone and redone exactly (ids, order, geometry)",
+      async run(expect, fail) {
+        await drawAll(page, mode);
+        const full = await page.elements();
+        expect(await page.history(), { undo: 6, redo: 0 });
+
+        for (let remaining = 5; remaining >= 0; remaining--) {
+          await undo(page, mode);
+          nearDeep(fail, `after undo → ${remaining} left`, await page.elements(), full.slice(0, remaining));
+        }
+        expect(await page.history(), { undo: 0, redo: 6, undoEnabled: false, redoEnabled: true });
+
+        for (let count = 1; count <= 6; count++) await redo(page, mode);
+        nearDeep(fail, "all redone", await page.elements(), full);
+        expect({ ids: (await page.elements()).map((el) => el.id).join() }, { ids: full.map((el) => el.id).join() });
+        expect(await page.history(), { undo: 6, redo: 0, undoEnabled: true, redoEnabled: false });
+      },
+    },
+    {
+      name: "U2: single and multiple deletion (keyboard and Delete button) undo / redo in original order",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        const full = await page.elements();
+
+        await page.click(items[1].hit);
+        await page.key("Delete");
+        expect({ count: (await page.elements()).length }, { count: 5 });
+        await undo(page, mode);
+        nearDeep(fail, "single delete undone", await page.elements(), full);
+        await redo(page, mode);
+        expect({ redone: (await page.elements()).some((el) => el.id === items[1].id) }, { redone: false });
+        await undo(page, mode);
+
+        // Multiple, via a marquee and the contextual Delete button.
+        const [c4, c5] = [items[4], items[5]];
+        await page.drag(
+          { x: Math.min(c4.box[0], c5.box[0]) - 30, y: Math.min(c4.box[1], c5.box[1]) - 30 },
+          { x: Math.max(c4.box[2], c5.box[2]) + 30, y: Math.max(c4.box[3], c5.box[3]) + 30 },
+        );
+        expect({ selected: (await page.selection()).ids.length }, { selected: 2 });
+        await page.evaluate(`[...document.querySelectorAll('button[aria-label^="Delete"]')].find((b) => b.offsetParent).click()`);
+        await sleep(100);
+        expect({ count: (await page.elements()).length }, { count: 4 });
+        const before = await page.history();
+        await undo(page, mode);
+        nearDeep(fail, "multi delete undone with original ordering", await page.elements(), full);
+        await redo(page, mode);
+        expect({ count: (await page.elements()).length, undo: (await page.history()).undo }, { count: 4, undo: before.undo });
+      },
+    },
+    {
+      name: "U3: one move = one entry (single and multiple); undo / redo restore exact geometry",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        const original = await page.elements();
+        const start = (await page.history()).undo;
+
+        // A single move through many pointer events.
+        const from = items[0].hit;
+        await page.pointerDown(from.x, from.y);
+        for (let i = 1; i <= 30; i++) {
+          await sleep(8);
+          await page.pointerMove(from.x + i, from.y + i / 2);
+        }
+        await page.pointerUp(from.x + 30, from.y + 15);
+        expect({ entries: (await page.history()).undo - start }, { entries: 1 });
+        const movedOne = await page.elements();
+
+        // Multiple: marquee the first two cells, then move them together.
+        const [a1, a2] = items;
+        await page.drag(
+          { x: Math.min(a1.box[0], a2.box[0]) - 30, y: Math.min(a1.box[1], a2.box[1]) - 30 },
+          { x: Math.max(a1.box[2], a2.box[2]) + 50, y: Math.max(a1.box[3], a2.box[3]) + 50 },
+        );
+        const grab = { x: a2.hit.x, y: a2.hit.y };
+        await page.drag(grab, { x: grab.x + 20, y: grab.y + 25 });
+        expect({ entries: (await page.history()).undo - start }, { entries: 2 });
+        const movedBoth = await page.elements();
+
+        await undo(page, mode);
+        nearDeep(fail, "multi-move undone", await page.elements(), movedOne);
+        await undo(page, mode);
+        nearDeep(fail, "single move undone", await page.elements(), original);
+        await redo(page, mode);
+        await redo(page, mode);
+        nearDeep(fail, "both redone", await page.elements(), movedBoth);
+      },
+    },
+    {
+      name: "U4: resizing every shape and editing line / arrow endpoints — one entry each, exact undo / redo",
+      async run(expect, fail) {
+        const items = await drawAll(page, mode);
+        for (const item of items) {
+          await page.click(item.hit);
+          const before = await page.elements();
+          const depth = (await page.history()).undo;
+          const { handles, endpoints } = await page.selection();
+          const grip = item.type === "line" || item.type === "arrow" ? endpoints.end : handles.se;
+          if (!grip) {
+            fail(`${item.type}: no handle`);
+            continue;
+          }
+          await page.drag(grip, { x: grip.x + 20, y: grip.y + 15 });
+          const after = await page.elements();
+          expect({ [`${item.type} entries`]: (await page.history()).undo - depth }, { [`${item.type} entries`]: 1 });
+          if (JSON.stringify(after) === JSON.stringify(before)) fail(`${item.type}: resize changed nothing`);
+
+          await undo(page, mode);
+          nearDeep(fail, `${item.type} undone`, await page.elements(), before);
+          await redo(page, mode);
+          nearDeep(fail, `${item.type} redone`, await page.elements(), after);
+        }
+      },
+    },
+    {
+      name: "U5: cancelled and no-op gestures create no history entries",
+      async run(expect, fail) {
+        const [x0, y0, x1, y1] = mode === "desktop" ? [500, 250, 700, 400] : [100, 200, 260, 330];
+        await page.drag({ x: x0, y: y0 }, { x: x1, y: y1 });
+        const base = await page.history();
+        const original = await page.elements();
+
+        const cancel = async (at) => {
+          if (touchOnly) {
+            await page.touchEvent("touchCancel", []);
+            await sleep(100);
+          } else {
+            await page.dropPointerCapture();
+            await page.pointerMove(at.x + 10, at.y + 10);
+            await page.pointerUp(at.x + 10, at.y + 10);
+          }
+        };
+
+        // Cancelled drawing.
+        await page.drag({ x: x0, y: y1 + 40 }, { x: x1, y: y1 + 120 }, { release: false });
+        await cancel({ x: x1, y: y1 + 120 });
+        expect({ afterCancelledDraw: (await page.elements()).length }, { afterCancelledDraw: 1 });
+
+        // A tap and a 1px drag with a drawing tool.
+        await page.drag({ x: x0, y: y1 + 60 }, { x: x0 + 1, y: y1 + 61 });
+
+        await page.selectTool("Select");
+        const hit = { x: x0 + (x1 - x0) / 4, y: y0 };
+
+        // Click without moving.
+        await page.click(hit);
+        // Drag away and back to exactly the same spot.
+        await page.pointerDown(hit.x, hit.y);
+        await page.pointerMove(hit.x + 40, hit.y + 30);
+        await page.pointerMove(hit.x, hit.y);
+        await page.pointerUp(hit.x, hit.y);
+
+        // Cancelled move.
+        await page.drag(hit, { x: hit.x + 50, y: hit.y + 50 }, { release: false });
+        await cancel({ x: hit.x + 50, y: hit.y + 50 });
+
+        // Cancelled resize.
+        const se = (await page.selection()).handles.se;
+        if (se) {
+          await page.drag(se, { x: se.x + 40, y: se.y + 40 }, { release: false });
+          await cancel({ x: se.x + 40, y: se.y + 40 });
+        } else fail("no se handle");
+
+        expect(await page.history(), { undo: base.undo, redo: 0 });
+        nearDeep(fail, "document unchanged", await page.elements(), original);
+      },
+    },
+    {
+      name: "U6: a new edit after undo clears redo",
+      async run(expect) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.drag(...spots.rect2);
+        await undo(page, mode);
+        expect(await page.history(), { undo: 1, redo: 1, redoEnabled: true });
+        await page.drag(...spots.line);
+        expect(await page.history(), { undo: 2, redo: 0, redoEnabled: false });
+        await redo(page, mode);
+        expect({ count: (await page.elements()).length }, { count: 2 });
+      },
+    },
+    {
+      name: "U7: panning, zooming, tool switches and selection changes never touch history",
+      async run(expect) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const base = await page.history();
+
+        await page.selectTool("Hand (pan)");
+        await page.drag(spots.empty, { x: spots.empty.x - 40, y: spots.empty.y - 30 });
+        await page.press("Zoom in");
+        await page.press("Zoom out");
+        await page.press("Fit content");
+        if (!touchOnly) await page.wheel({ x: 600, y: 400 }, { deltaY: -100 });
+        await page.selectTool("Ellipse");
+        await page.selectTool("Select");
+        const box = (await page.screenBoxes()).elements[0];
+        await page.click({ x: box.x + box.w / 4, y: box.y }); // select
+        await page.click({ x: 5, y: box.y + box.h + 200 }); // deselect
+
+        expect(await page.history(), { undo: base.undo, redo: base.redo });
+      },
+    },
+    {
+      name: "U8: Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y and ⌘ variants; ignored while typing in a field",
+      skip: touchOnly && "keyboard",
+      async run(expect) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.drag(...spots.rect2);
+
+        await page.modKey("z");
+        expect({ afterCtrlZ: (await page.elements()).length }, { afterCtrlZ: 1 });
+        await page.modKey("z", { shift: true });
+        expect({ afterCtrlShiftZ: (await page.elements()).length }, { afterCtrlShiftZ: 2 });
+        await page.modKey("z", { meta: true });
+        expect({ afterCmdZ: (await page.elements()).length }, { afterCmdZ: 1 });
+        await page.modKey("y");
+        expect({ afterCtrlY: (await page.elements()).length }, { afterCtrlY: 2 });
+        await page.modKey("z", { meta: true, shift: true });
+        expect({ afterCmdShiftZ: (await page.elements()).length }, { afterCmdShiftZ: 2 }); // nothing to redo
+
+        await page.evaluate(`(() => { const i = document.createElement('input'); i.id = 'test-input'; document.body.append(i); i.focus(); })()`);
+        await page.modKey("z");
+        expect({ whileTyping: (await page.elements()).length }, { whileTyping: 2 });
+        await page.evaluate(`document.getElementById('test-input').remove()`);
+        await page.modKey("z");
+        expect({ afterBlur: (await page.elements()).length }, { afterBlur: 1 });
+      },
+    },
+    {
+      name: "U9: Undo / Redo buttons enable, disable and act like the shortcuts",
+      async run(expect) {
+        expect(await page.history(), { undo: 0, redo: 0, undoEnabled: false, redoEnabled: false });
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        expect(await page.history(), { undo: 1, redo: 0, undoEnabled: true, redoEnabled: false });
+        await page.press("Undo");
+        expect({ count: (await page.elements()).length }, { count: 0 });
+        expect(await page.history(), { undo: 0, redo: 1, undoEnabled: false, redoEnabled: true });
+        await page.press("Redo");
+        expect({ count: (await page.elements()).length }, { count: 1 });
+        expect(await page.history(), { undo: 1, redo: 0, undoEnabled: true, redoEnabled: false });
+      },
+    },
+    {
+      name: "U10: undo during a drag cancels the drag instead of overwriting the undo",
+      skip: touchOnly && "keyboard",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const [created] = await page.elements();
+        await page.selectTool("Select");
+
+        // Move it once (history: create, move).
+        const hit = { x: spots.rect[0].x + 30, y: spots.rect[0].y };
+        await page.drag(hit, { x: hit.x + 40, y: hit.y });
+        expect(await page.history(), { undo: 2, redo: 0 });
+
+        // Start dragging it again, and undo the first move mid-drag.
+        const moved = { x: hit.x + 40, y: hit.y };
+        await page.drag(moved, { x: moved.x + 60, y: moved.y + 40 }, { release: false });
+        await page.modKey("z");
+        await page.pointerMove(moved.x + 80, moved.y + 60);
+        await page.pointerUp(moved.x + 80, moved.y + 60);
+
+        // The undo stands: the stale drag must not be applied on release.
+        nearDeep(fail, "back at its created position", await page.elements(), [created]);
+        expect(await page.history(), { undo: 1, redo: 1 });
+      },
+    },
   ];
+}
+
+/** Undo by keyboard on desktop, by the toolbar button on touch. */
+async function undo(page, mode) {
+  if (mode === "desktop") await page.modKey("z");
+  else await page.press("Undo");
+}
+
+async function redo(page, mode) {
+  if (mode === "desktop") await page.modKey("z", { shift: true });
+  else await page.press("Redo");
 }
 
 // --------------------------------------------------- navigation test helpers

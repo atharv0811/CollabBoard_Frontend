@@ -171,9 +171,18 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   useEffect(
     () =>
       useWorkspaceStore.subscribe((state, previous) => {
-        if (state.activeTool === previous.activeTool) return;
-        abortGesture();
-        setCursor(state.activeTool === "hand" ? "grab" : "default");
+        if (state.activeTool !== previous.activeTool) {
+          abortGesture();
+          setCursor(state.activeTool === "hand" ? "grab" : "default");
+          return;
+        }
+        // The document changed under a move / resize / endpoint drag (e.g. Ctrl+Z
+        // mid-drag). Its snapshot of the originals is stale, so committing it
+        // would overwrite that change — cancel the drag instead. A gesture's own
+        // commit can't trigger this: the gesture is cleared before it commits.
+        const gesture = gestureRef.current;
+        const transforms = gesture?.kind === "move" || gesture?.kind === "resize" || gesture?.kind === "endpoint";
+        if (transforms && state.elements !== previous.elements) abortGesture();
       }),
     [abortGesture],
   );

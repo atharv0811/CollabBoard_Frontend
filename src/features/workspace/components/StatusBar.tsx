@@ -3,6 +3,7 @@ import { Divider } from "@/components/common/Divider";
 import { IconButton } from "@/components/common/IconButton";
 import { Tooltip } from "@/components/common/Tooltip";
 import { cn } from "@/lib/utils";
+import { HistoryControls } from "./HistoryControls";
 import { ViewportControls } from "./ViewportControls";
 
 interface StatusBarProps {
@@ -17,7 +18,10 @@ export function StatusBar({ className }: StatusBarProps) {
         className,
       )}
     >
-      <ViewportControls className="justify-self-start" />
+      <div className="flex items-center gap-2 justify-self-start">
+        <ViewportControls />
+        <HistoryControls />
+      </div>
       <div
         role="status"
         className="surface-floating pointer-events-auto flex h-9 items-center gap-2.5 px-3 text-xs text-muted-foreground"

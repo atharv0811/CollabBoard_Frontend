@@ -1,5 +1,6 @@
 import { CanvasContextBar } from "@/features/workspace/components/CanvasContextBar";
 import { CanvasSurface } from "@/features/workspace/components/CanvasSurface";
+import { HistoryControls } from "@/features/workspace/components/HistoryControls";
 import { StatusBar } from "@/features/workspace/components/StatusBar";
 import { ViewportControls } from "@/features/workspace/components/ViewportControls";
 import { WorkspaceHeader } from "@/features/workspace/components/WorkspaceHeader";
@@ -35,7 +36,10 @@ export default function WorkspacePage() {
       {/* Bottom: zoom controls, hint / selection actions + toolbar on small screens.
           (On large screens the status bar holds the zoom controls.) */}
       <div className="pointer-events-none absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) flex flex-col items-center gap-3 lg:hidden">
-        <ViewportControls className="self-end" />
+        <div className="flex w-full items-center justify-between gap-2">
+          <HistoryControls />
+          <ViewportControls />
+        </div>
         <CanvasContextBar className="pointer-events-auto" />
         <WorkspaceToolbar
           activeTool={activeTool}
