@@ -36,7 +36,7 @@ export interface ToolDefinition {
 
 /**
  * Toolbar groups, rendered left → right with a divider between groups.
- * Static data only — tool behaviour is yours to implement.
+ * Drawing tools are handled by canvas/elements.ts (isDrawingTool).
  */
 export const toolGroups: ToolDefinition[][] = [
   [

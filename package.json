@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:canvas": "node scripts/canvas-drawing.test.mjs",
+    "test:unit": "node --test \"tests/**/*.test.ts\"",
+    "test": "bun run test:unit && bun run test:canvas"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
