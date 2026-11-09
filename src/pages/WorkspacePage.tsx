@@ -18,10 +18,8 @@ export default function WorkspacePage() {
     <div className="relative h-svh w-full overflow-hidden bg-canvas text-foreground">
       <CanvasSurface />
 
-      {/* Top-left: menu button + board menu panel */}
       <WorkspaceMenu className="absolute top-(--workspace-gutter) left-(--workspace-gutter) z-(--z-panel)" />
 
-      {/* Top-centre: toolbar + hint / selection actions (large screens) */}
       <div className="absolute top-(--workspace-gutter) left-1/2 z-(--z-overlay) hidden -translate-x-1/2 flex-col items-center gap-3 lg:flex">
         <WorkspaceToolbar
           activeTool={activeTool}
@@ -30,11 +28,8 @@ export default function WorkspacePage() {
         <CanvasContextBar />
       </div>
 
-      {/* Top-right: header actions */}
       <WorkspaceHeader className="absolute top-(--workspace-gutter) right-(--workspace-gutter) z-(--z-panel)" />
 
-      {/* Bottom: zoom controls, hint / selection actions + toolbar on small screens.
-          (On large screens the status bar holds the zoom controls.) */}
       <div className="pointer-events-none absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) flex flex-col items-center gap-3 lg:hidden">
         <div className="flex w-full items-center justify-between gap-2">
           <HistoryControls />
@@ -48,7 +43,6 @@ export default function WorkspacePage() {
         />
       </div>
 
-      {/* Bottom: status + help on large screens */}
       <StatusBar className="absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) hidden lg:grid" />
     </div>
   );

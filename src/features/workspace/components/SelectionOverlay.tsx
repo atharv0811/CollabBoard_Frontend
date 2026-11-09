@@ -11,14 +11,11 @@ import {
 interface SelectionOverlayProps {
   selected: readonly CanvasElement[];
   marquee: Bounds | null;
-  /** Current zoom: overlay sizes are screen px, so they are divided by it. */
   zoom: number;
 }
 
-/** Drawn handle size in screen px. */
 const HANDLE_SIZE = 9;
 
-/** Overlay strokes keep a constant on-screen width at any zoom. */
 const screenStroke = { vectorEffect: "non-scaling-stroke" } as const;
 
 export function SelectionOverlay({ selected, marquee, zoom }: SelectionOverlayProps) {

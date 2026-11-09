@@ -8,11 +8,9 @@ import { useWorkspaceStore } from "../store/workspaceStore";
 
 interface ViewportControlsProps {
   className?: string;
-  /** Where tooltips open: "top" when the controls sit at the bottom of the screen. */
   tooltipSide?: "top" | "bottom";
 }
 
-/** Zoom out · percentage · zoom in · reset · fit content. */
 export function ViewportControls({ className, tooltipSide = "top" }: ViewportControlsProps) {
   const zoom = useWorkspaceStore((state) => state.viewport.zoom);
   const zoomIn = useWorkspaceStore((state) => state.zoomIn);

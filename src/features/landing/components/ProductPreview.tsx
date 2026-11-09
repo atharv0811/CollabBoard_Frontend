@@ -38,11 +38,6 @@ function MiniToolbar() {
   );
 }
 
-/**
- * Static, scaled-down mockup of the workspace for the landing hero.
- * Mirrors the real workspace chrome (menu, toolbar, header) using the same
- * tool data and tokens. Entirely decorative and non-interactive.
- */
 export function ProductPreview({ className }: { className?: string }) {
   return (
     <div className={cn("mx-auto w-full max-w-5xl", className)}>
@@ -64,7 +59,7 @@ export function ProductPreview({ className }: { className?: string }) {
         <div
           role="img"
           aria-label="Preview of the CollabBoard workspace: a flowchart being edited by two collaborators"
-          className="relative aspect-4/3 overflow-hidden rounded-xl border border-border bg-dot-grid sm:aspect-[16/9]"
+          className="relative aspect-4/3 overflow-hidden rounded-xl border border-border bg-dot-grid sm:aspect-video"
         >
           <div
             aria-hidden="true"

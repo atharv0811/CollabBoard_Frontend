@@ -1,19 +1,9 @@
-/*
- * CollabBoard design tokens
- * ------------------------------------------------------------------
- * Theme-independent values: radius, layout sizes, motion, layering and
- * fixed brand constants. Colour values that change per theme live in
- * themes.css.
- */
-
 :root {
-  /* Brand constants (identical in every theme) */
   --brand-teal: #0d9488;
   --brand-teal-soft: #5eead4;
   --brand-ink: #1c1917;
   --brand-paper: #faf9f6;
 
-  /* Collaborator / avatar tones — pastel so dark ink text stays readable */
   --tone-amber: #fcd34d;
   --tone-rose: #fda4af;
   --tone-sky: #7dd3fc;
@@ -21,24 +11,20 @@
   --tone-teal: #5eead4;
   --tone-ink: #1c1917;
 
-  /* Radius scale (shadcn derives sm…4xl from --radius) */
-  --radius: 0.625rem; /* 10px – buttons, inputs */
-  --panel-radius: 0.875rem; /* 14px – floating panels, cards */
-  --tool-radius: 0.5rem; /* 8px  – toolbar buttons, menu rows */
+  --radius: 0.625rem;
+  --panel-radius: 0.875rem;
+  --tool-radius: 0.5rem;
 
-  /* Workspace layout */
   --workspace-gutter: 1rem;
   --tool-size: 2.25rem;
   --sidebar-width: 17rem;
   --grid-size: 22px;
   --grid-dot-size: 1px;
 
-  /* Motion */
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Layering */
   --z-canvas: 0;
   --z-overlay: 10;
   --z-panel: 20;

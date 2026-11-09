@@ -35,11 +35,6 @@ import { useWorkspaceStore } from "../store/workspaceStore";
 
 type SvgPointerEvent = ReactPointerEvent<SVGSVGElement>;
 
-/**
- * The single gesture in progress. Only its pointer(s) may update or finish it.
- * Transform gestures keep the untouched originals so every frame is computed
- * from the start of the drag and cancelling is free.
- */
 type Gesture =
   | { kind: "draw"; pointerId: number; draft: DrawingDraft }
   | { kind: "move"; pointerId: number; origin: Point; originals: CanvasElement[]; previousSelection: string[] }
@@ -50,18 +45,15 @@ type Gesture =
       handle: HandleId;
       bounds: Bounds;
       originals: CanvasElement[];
-      /** Minimum size in world units, fixed for the whole drag */
       minSize: number;
     }
   | { kind: "endpoint"; pointerId: number; origin: Point; endpoint: EndpointId; original: LinearElement }
   | { kind: "marquee"; pointerId: number; origin: Point; baseSelection: string[]; previousSelection: string[] }
-  /** Hand tool or middle mouse button. Client px, so it is independent of the changing viewport. */
   | { kind: "pan"; pointerId: number; startClient: Point; startViewport: Viewport }
   | { kind: "pinch"; pointerIds: [number, number]; start: PinchStart };
 
 type TransformGesture = Extract<Gesture, { kind: "move" | "resize" | "endpoint" }>;
 
-/** A touch on the canvas, in client px. */
 interface TrackedTouch {
   x: number;
   y: number;
@@ -69,11 +61,6 @@ interface TrackedTouch {
   startY: number;
 }
 
-/**
- * A second finger turns the gesture into a pinch only while the first finger
- * has moved less than this (screen px). An established drawing / move is
- * protected from stray touches; a fresh two-finger contact becomes navigation.
- */
 const PINCH_TAKEOVER_SLOP = 10;
 
 const ownsPointer = (gesture: Gesture, pointerId: number) =>
@@ -115,7 +102,6 @@ function transformedElements(gesture: TransformGesture, point: Point): CanvasEle
 
 const toPreviewMap = (elements: readonly CanvasElement[]) => new Map(elements.map((element) => [element.id, element]));
 
-/** Midpoint (canvas px) and distance of two tracked touches. */
 function pinchMetrics(svg: SVGSVGElement, a: TrackedTouch, b: TrackedTouch) {
   const rect = svg.getBoundingClientRect();
   return {
@@ -130,7 +116,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   const [marquee, setMarquee] = useState<Bounds | null>(null);
   const [cursor, setCursor] = useState<CanvasCursor>("default");
   const gestureRef = useRef<Gesture | null>(null);
-  /** Every touch currently down on the canvas, whether or not it drives the gesture. */
   const touchesRef = useRef(new Map<number, TrackedTouch>());
 
   const clearTransient = useCallback(() => {
@@ -140,11 +125,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     setMarquee(null);
   }, []);
 
-  /**
-   * Drops the unfinished gesture without touching committed elements.
-   * `restoreSelection` also undoes a selection made by its pointerdown
-   * (used when a pinch takes over, so a pinch never selects anything).
-   */
   const discardGesture = useCallback(
     (restoreSelection: boolean) => {
       const gesture = gestureRef.current;
@@ -157,11 +137,10 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     [clearTransient],
   );
 
-  /** Discards the gesture and releases its pointer capture. */
   const abortGesture = useCallback(() => {
     const gesture = gestureRef.current;
     if (!gesture) return;
-    discardGesture(false); // cleared first, so the lostpointercapture below is ignored
+    discardGesture(false);
 
     const svg = svgRef.current;
     const ids = gesture.kind === "pinch" ? gesture.pointerIds : [gesture.pointerId];
@@ -176,10 +155,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
           setCursor(state.activeTool === "hand" ? "grab" : "default");
           return;
         }
-        // The document changed under a move / resize / endpoint drag (e.g. Ctrl+Z
-        // mid-drag). Its snapshot of the originals is stale, so committing it
-        // would overwrite that change — cancel the drag instead. A gesture's own
-        // commit can't trigger this: the gesture is cleared before it commits.
         const gesture = gestureRef.current;
         const transforms = gesture?.kind === "move" || gesture?.kind === "resize" || gesture?.kind === "endpoint";
         if (transforms && state.elements !== previous.elements) abortGesture();
@@ -192,10 +167,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     return gesture && ownsPointer(gesture, event.pointerId) ? gesture : null;
   };
 
-  /**
-   * Selection decision at `point`. Tolerances are defined in screen px and
-   * converted to world units here — the one place zoom affects hit testing.
-   */
   const decide = (event: SvgPointerEvent, point: Point) => {
     const store = useWorkspaceStore.getState();
     const { zoom } = store.viewport;
@@ -254,29 +225,25 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     }
   }
 
-  /** May a second finger turn `gesture` into a pinch? */
   function canHandOverToPinch(gesture: Gesture): boolean {
     if (gesture.kind === "pinch") return false;
     const touch = touchesRef.current.get(gesture.pointerId);
-    if (!touch) return false; // mouse / pen gestures are never taken over
+    if (!touch) return false;
     if (gesture.kind === "pan") return true;
     return Math.hypot(touch.x - touch.startX, touch.y - touch.startY) < PINCH_TAKEOVER_SLOP;
   }
 
-  /** Starts a two-finger pinch / pan from the two tracked touches. */
   function startPinch(svg: SVGSVGElement) {
     const entries = [...touchesRef.current.entries()];
     if (entries.length !== 2) return;
     const [[idA, a], [idB, b]] = entries as [[number, TrackedTouch], [number, TrackedTouch]];
 
-    // Discard, don't abort: releasing the first finger's capture would fire a
-    // lostpointercapture that ends the pinch we are about to start.
     discardGesture(true);
     for (const id of [idA, idB]) {
       try {
         if (!svg.hasPointerCapture(id)) svg.setPointerCapture(id);
       } catch {
-        return; // a finger is already gone
+        return;
       }
     }
 
@@ -330,9 +297,6 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   const trackTouch = (event: SvgPointerEvent) => {
     if (event.pointerType !== "touch") return;
     const touches = touchesRef.current;
-    // A primary touch going down means no other finger is on the screen, so any
-    // tracked touch is stale (its pointerup / pointercancel was never delivered).
-    // Without this, one missed event would turn every later drawing into a pinch.
     if (event.type === "pointerdown" && event.isPrimary) touches.clear();
     const known = touches.get(event.pointerId);
     if (known) {
@@ -352,14 +316,13 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     const isTouch = event.pointerType === "touch";
     const svg = event.currentTarget;
 
-    // A second finger: pinch if the first finger's gesture may hand over, otherwise ignore it.
     const current = gestureRef.current;
     if (current) {
       if (isTouch && touchesRef.current.size === 2 && canHandOverToPinch(current)) startPinch(svg);
       return;
     }
     if (isTouch && touchesRef.current.size === 2) {
-      startPinch(svg); // the first finger started nothing (e.g. a tap that only selected)
+      startPinch(svg);
       return;
     }
     if (isTouch && touchesRef.current.size > 2) return;
@@ -426,7 +389,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
       case "marquee":
       case "pan":
       case "pinch":
-        return; // already applied live
+        return;
       default: {
         if (!point || distance(point, gesture.origin) === 0) return;
         store.updateElements(transformedElements(gesture, point));
@@ -445,18 +408,15 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     updateHoverCursor(event);
   };
 
-  /** pointercancel: the finger is gone. Drop the unfinished gesture only. */
   const onPointerCancel = (event: SvgPointerEvent) => {
     forgetTouch(event);
     if (gestureFor(event)) abortGesture();
   };
 
-  /** Capture lost before pointerup: drop the unfinished gesture only (the finger may still be down). */
   const onLostPointerCapture = (event: SvgPointerEvent) => {
     if (gestureFor(event)) abortGesture();
   };
 
-  /** Stops the browser's middle-click autoscroll so middle-drag can pan. */
   const onMouseDown = (event: ReactMouseEvent<SVGSVGElement>) => {
     if (event.button === 1) event.preventDefault();
   };

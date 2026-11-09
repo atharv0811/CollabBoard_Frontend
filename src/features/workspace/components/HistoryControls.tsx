@@ -13,9 +13,7 @@ const isApple = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(
 const UNDO_SHORTCUT = isApple ? "⌘Z" : "Ctrl+Z";
 const REDO_SHORTCUT = isApple ? "⇧⌘Z" : "Ctrl+Y";
 
-/** Undo / redo buttons. Same store actions as the keyboard shortcuts. */
 export function HistoryControls({ className, tooltipSide = "top" }: HistoryControlsProps) {
-  // Boolean / number selectors: these buttons re-render only when availability changes.
   const undoDepth = useWorkspaceStore((state) => state.history.past.length);
   const redoDepth = useWorkspaceStore((state) => state.history.future.length);
   const undo = useWorkspaceStore((state) => state.undo);

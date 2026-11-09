@@ -75,7 +75,6 @@ export interface AvatarStackPerson {
 
 interface AvatarStackProps {
   people: AvatarStackPerson[];
-  /** Number shown in the trailing "+N" bubble */
   extra?: number;
   size?: AvatarSize;
   className?: string;

@@ -30,7 +30,6 @@ export function CanvasSurface({ className }: CanvasSurfaceProps) {
     setCanvasSize({ width: measured.width, height: measured.height });
   }, [measured.width, measured.height, setCanvasSize]);
 
-  // Elements as displayed: committed data with any live move / resize preview applied.
   const displayed = useMemo(
     () => (preview ? elements.map((element) => preview.get(element.id) ?? element) : elements),
     [elements, preview],
@@ -42,7 +41,6 @@ export function CanvasSurface({ className }: CanvasSurfaceProps) {
 
   const previewElement = draft ? elementFromDraft(draft, PREVIEW_ID) : null;
 
-  // The viewport is applied only through the viewBox: element data never changes.
   const viewBox = viewBoxFor(viewport, measured);
   const grid = gridFor(viewport);
   const gridStyle = {

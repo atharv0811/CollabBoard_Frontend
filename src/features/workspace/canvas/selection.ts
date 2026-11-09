@@ -3,7 +3,6 @@ import type { Bounds } from "./geometry.ts";
 import { boundsContainPoint, elementBounds, topmostElementAt, unionBounds } from "./hitTest.ts";
 import type { EndpointId, HandleId } from "./transform.ts";
 
-/** Screen px between the selected geometry and the drawn selection box (divided by zoom). */
 export const SELECTION_PADDING = 6;
 
 export type LinearElement = Extract<CanvasElement, { type: "line" | "arrow" }>;
@@ -57,7 +56,6 @@ export function handlePositions(frame: Bounds): [HandleId, Point][] {
 
 const MIN_FRAME_FOR_EDGE_HANDLES = 32;
 
-/** Edge handles need MIN_FRAME_FOR_EDGE_HANDLES screen px, so `zoom` is taken into account. */
 export function visibleHandles(frame: Bounds, zoom = 1): [HandleId, Point][] {
   const minSize = MIN_FRAME_FOR_EDGE_HANDLES / zoom;
   return handlePositions(frame).filter(([id]) => {
@@ -93,11 +91,8 @@ export interface PointerDownInput {
   selectedIds: readonly string[];
   point: Point;
   shiftKey: boolean;
-  /** Stroke hit tolerance in world units (screen tolerance ÷ zoom) */
   tolerance: number;
-  /** Handle hit radius in world units (screen radius ÷ zoom) */
   handleRadius: number;
-  /** Canvas px per world unit; keeps selection padding screen-constant. Default 1. */
   zoom?: number;
 }
 

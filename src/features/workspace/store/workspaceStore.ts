@@ -15,21 +15,11 @@ import type { ToolId } from "../data/tools.ts";
 import { deepEqual, emptyHistory, recordEdit, redoStep, undoStep, type History } from "./history.ts";
 
 export interface WorkspaceState {
-  /** The document. Only addElement / updateElements / deleteElements / undo / redo change it. */
   elements: CanvasElement[];
-  /**
-   * Undo / redo of the document only. Selection, tool, viewport and canvas
-   * size are separate fields, so they can never be recorded.
-   */
   history: History<CanvasElement[]>;
   selectedIds: string[];
   activeTool: ToolId;
-  /**
-   * What part of the world is visible. Navigation only ever changes this —
-   * element geometry is never touched by pan or zoom.
-   */
   viewport: Viewport;
-  /** Measured canvas size in px (set by the canvas; needed for centre zoom and fit). */
   canvasSize: Size;
 }
 
@@ -38,9 +28,7 @@ export interface WorkspaceActions {
   updateElements: (updated: readonly CanvasElement[]) => void;
   deleteElements: (ids: readonly string[]) => void;
   deleteSelected: () => number;
-  /** Restores the previous document. Returns false when there is nothing to undo. */
   undo: () => boolean;
-  /** Re-applies the last undone change. Returns false when there is nothing to redo. */
   redo: () => boolean;
   setSelection: (ids: readonly string[]) => void;
   clearSelection: () => void;
@@ -48,15 +36,11 @@ export interface WorkspaceActions {
 
   setCanvasSize: (size: Size) => void;
   setViewport: (viewport: Viewport) => void;
-  /** Pan by a canvas-px delta. */
   panViewport: (dx: number, dy: number) => void;
-  /** Zoom to `zoom` (clamped), keeping `anchor` (canvas px; default: centre) fixed. */
   zoomTo: (zoom: number, anchor?: Point) => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  /** Back to 100% around the canvas centre. */
   resetZoom: () => void;
-  /** Show every element; on an empty board, return to the default view. */
   fitContent: () => void;
 }
 
@@ -67,10 +51,8 @@ const sameIds = (a: readonly string[], b: readonly string[]) =>
 
 const sameViewport = (a: Viewport, b: Viewport) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
 
-/** Tools that keep the current selection when chosen (navigation doesn't edit). */
 const KEEPS_SELECTION: ReadonlySet<ToolId> = new Set<ToolId>(["selection", "hand"]);
 
-/** Selection without ids that no longer exist (e.g. after undoing a creation). */
 const pruneSelection = (selectedIds: string[], elements: readonly CanvasElement[]) => {
   const existing = new Set(elements.map((element) => element.id));
   const kept = selectedIds.filter((id) => existing.has(id));
@@ -88,11 +70,6 @@ export const initialWorkspaceState: WorkspaceState = {
 
 export const createWorkspaceStore = () =>
   create<WorkspaceStore>()((set, get) => {
-    /**
-     * The single write path for document edits: one call = one undo step.
-     * A no-op (same array back) records nothing; a real edit records the
-     * previous array and discards the redo future.
-     */
     const commit = (next: CanvasElement[]) => {
       const { elements, history, selectedIds } = get();
       if (next === elements) return;
@@ -103,7 +80,6 @@ export const createWorkspaceStore = () =>
       });
     };
 
-    /** Applies an undo / redo result, keeping the selection valid. */
     const travel = (step: { history: History<CanvasElement[]>; value: CanvasElement[] } | null) => {
       if (!step) return false;
       set((state) => ({
@@ -124,7 +100,6 @@ export const createWorkspaceStore = () =>
         let changed = false;
         const next = get().elements.map((element) => {
           const replacement = byId.get(element.id);
-          // Unchanged geometry (e.g. dragged away and back) keeps the old object → no-op.
           if (!replacement || deepEqual(replacement, element)) return element;
           changed = true;
           return replacement;
