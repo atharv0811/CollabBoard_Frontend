@@ -1,10 +1,9 @@
 import { Logo } from "@/components/common/Logo";
 import { cn } from "@/lib/utils";
-import {
-  mainActions,
-  PREVIEW_ACTIVE_MENU_ITEM,
-  workspaceLinks,
-} from "../data/menuItems";
+import { useBoardsStore } from "@/features/boards/boardsStore";
+import { boardSession } from "@/features/boards/boardSession";
+import { BoardsSection } from "@/features/boards/components/BoardsSection";
+import { mainActions } from "../data/menuItems";
 import { SidebarFooter } from "./SidebarFooter";
 import { SidebarSection } from "./SidebarSection";
 
@@ -13,6 +12,15 @@ interface WorkspaceSidebarProps {
 }
 
 export function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
+  const boardName = useBoardsStore(
+    (state) => state.boards.find((board) => board.id === state.activeBoardId)?.name ?? "",
+  );
+  const openDialog = useBoardsStore((state) => state.openDialog);
+
+  const onAction = (id: string) => {
+    if (id === "new" && !boardSession.isTemporary) openDialog({ kind: "create" });
+  };
+
   return (
     <nav
       id="workspace-menu"
@@ -24,19 +32,19 @@ export function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
     >
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <Logo size="sm" />
-        <span className="truncate text-xs text-muted-foreground">
-          Untitled board
+        <span
+          data-active-board-name=""
+          title={boardName}
+          className="truncate text-xs text-muted-foreground"
+        >
+          {boardName}
         </span>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto py-1.5 scrollbar-thin">
-        <SidebarSection items={mainActions} />
+        <SidebarSection items={mainActions} onItemClick={onAction} />
         <div className="mx-4 h-px bg-border" />
-        <SidebarSection
-          title="Workspace"
-          items={workspaceLinks}
-          activeId={PREVIEW_ACTIVE_MENU_ITEM}
-        />
+        <BoardsSection />
       </div>
 
       <div className="border-t border-border py-2">

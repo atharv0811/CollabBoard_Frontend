@@ -4,15 +4,17 @@ import type { MenuItem } from "../data/menuItems";
 interface SidebarItemProps {
   item: MenuItem;
   active?: boolean;
+  onClick?: () => void;
 }
 
-export function SidebarItem({ item, active = false }: SidebarItemProps) {
+export function SidebarItem({ item, active = false, onClick }: SidebarItemProps) {
   const Icon = item.icon;
 
   return (
     <li>
       <button
         type="button"
+        onClick={onClick}
         aria-current={active ? "page" : undefined}
         className={cn(
           "group/item flex h-7.5 w-full items-center gap-2.5 rounded-tool px-2.5 text-left text-[0.8125rem] text-foreground/85 transition-colors duration-150",

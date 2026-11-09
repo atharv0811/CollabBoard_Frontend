@@ -91,7 +91,7 @@ async function launchBrowser() {
     });
 
   const evaluate = async (expression) =>
-    (await send("Runtime.evaluate", { expression, returnByValue: true })).result.result.value;
+    (await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result.result.value;
 
   await send("Runtime.enable");
   await send("Page.enable");
@@ -125,10 +125,25 @@ function createPage(browser, { url, mode }) {
     await sleep(400);
   }
 
+  /** Opens a fresh workspace: saved boards from earlier tests are wiped first. */
   async function open() {
     await resize(initialSize.width, initialSize.height);
     await send("Emulation.setTouchEmulationEnabled", { enabled: touch, maxTouchPoints: touch ? 5 : 1 });
     browser.exceptions.length = 0;
+    // Cleared without navigating away: after a multi-touch sequence, any intermediate
+    // navigation (about:blank, '/') leaves Chrome's emulated touch input dead on the
+    // next page (verified). The app closes its connection on `versionchange`.
+    await send("Storage.clearDataForOrigin", { origin: new URL(url).origin, storageTypes: "indexeddb" });
+    await load();
+  }
+
+  /** Reloads the workspace keeping saved data (what a browser refresh does). */
+  async function reload() {
+    browser.exceptions.length = 0;
+    await load();
+  }
+
+  async function load() {
     await send("Page.navigate", { url });
     for (let attempt = 0; attempt < 80; attempt++) {
       if (await evaluate(`!!document.querySelector('${CANVAS}')`)) {
@@ -368,6 +383,71 @@ function createPage(browser, { url, mode }) {
     })()`);
   }
 
+  /** Boards listed in the menu (opens it if needed). */
+  async function boardList() {
+    await openMenu();
+    return evaluate(`[...document.querySelectorAll('[data-board-id]')].map((row) => ({
+      id: row.getAttribute('data-board-id'),
+      name: row.querySelector('[data-board-name]')?.textContent ?? row.textContent.trim(),
+      active: !!row.querySelector('[aria-current="page"]'),
+      unreadable: row.hasAttribute('data-unreadable'),
+    }))`);
+  }
+
+  async function openMenu() {
+    const open = await evaluate(`!!document.querySelector('#workspace-menu')`);
+    if (!open) await press("Open board menu");
+  }
+
+  async function closeMenu() {
+    const open = await evaluate(`!!document.querySelector('#workspace-menu')`);
+    if (open) await press("Close board menu");
+  }
+
+  /** Clicks the visible button whose text is exactly `text` (e.g. a dialog button). */
+  async function pressText(text) {
+    await sleep(400);
+    const center = await evaluate(`(() => {
+      const button = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === ${JSON.stringify(text)} && b.getClientRects().length);
+      if (!button) return null;
+      const r = button.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    })()`);
+    if (!center) throw new Error(`No visible button "${text}"`);
+    await click(center);
+  }
+
+  /** Replaces the focused field's (selected) text, as typing would. */
+  async function type(text) {
+    await evaluate(`document.activeElement.select?.()`);
+    await send("Input.insertText", { text });
+    await sleep(80);
+  }
+
+  async function saveStatus() {
+    return evaluate(`[...document.querySelectorAll('[data-save-status]')].find((el) => el.getClientRects().length)?.getAttribute('data-save-status') ?? null`);
+  }
+
+  /** Waits until the visible save indicator reports `status` (default: saved). */
+  async function waitForSave(status = "saved", timeout = 4000) {
+    const deadline = Date.now() + timeout;
+    let current = null;
+    while (Date.now() < deadline) {
+      current = await saveStatus();
+      if (current === status) return current;
+      await sleep(80);
+    }
+    return current;
+  }
+
+  async function createBoard(name) {
+    await openMenu();
+    await press("New board");
+    await type(name);
+    await pressText("Create board");
+    await sleep(200);
+  }
+
   async function key(name) {
     const codes = { Delete: 46, Backspace: 8, Escape: 27 };
     for (const type of ["keyDown", "keyUp"]) {
@@ -381,6 +461,7 @@ function createPage(browser, { url, mode }) {
     dropPointerCapture, mouseClickDrag, pointerDown, pointerMove, pointerUp, touch,
     selection, click, key, evaluate, hover, canvasCursor,
     wheel, press, view, screenBoxes, send, modKey, history,
+    reload, boardList, openMenu, closeMenu, pressText, type, saveStatus, waitForSave, createBoard,
   };
 }
 
@@ -1587,7 +1668,305 @@ function defineTests(page, mode) {
         expect(await page.history(), { undo: 1, redo: 1 });
       },
     },
+
+    // ---- Milestone 6: persistence and boards
+
+    {
+      name: "P1: first launch opens an empty 'Untitled board'; drawings survive a reload exactly",
+      async run(expect, fail) {
+        const boards = await page.boardList();
+        expect({ count: boards.length, name: boards[0]?.name, active: boards[0]?.active }, { count: 1, name: "Untitled board", active: true });
+        await page.closeMenu();
+        expect({ status: await page.saveStatus() }, { status: "saved" });
+
+        await drawAll(page, mode);
+        expect({ status: await page.waitForSave() }, { status: "saved" });
+        const drawn = await page.elements();
+
+        await page.reload();
+        nearDeep(fail, "restored after reload", await page.elements(), drawn);
+        expect({ ids: (await page.elements()).map((el) => el.id).join() }, { ids: drawn.map((el) => el.id).join() });
+        expect(await page.history(), { undo: 0, redo: 0 });
+      },
+    },
+    {
+      name: "P2: renaming persists across reloads; empty and duplicate names are refused",
+      async run(expect, fail) {
+        const [board] = await page.boardList();
+        await page.press(`Rename ${board.name}`);
+        await page.type("   ");
+        await page.pressText("Rename");
+        const emptyError = await page.evaluate(`document.querySelector('dialog [role="alert"]')?.textContent ?? ""`);
+        if (!/Enter a board name/.test(emptyError)) fail(`empty name error: "${emptyError}"`);
+
+        await page.type("Product roadmap");
+        await page.pressText("Rename");
+        await sleep(200);
+        expect({ dialogClosed: await page.evaluate(`!document.querySelector('dialog[open]')`) }, { dialogClosed: true });
+
+        await page.createBoard("Second");
+        const second = (await page.boardList()).find((b) => b.name === "Second");
+        await page.press(`Rename ${second.name}`);
+        await page.type("product ROADMAP");
+        await page.pressText("Rename");
+        const dupError = await page.evaluate(`document.querySelector('dialog [role="alert"]')?.textContent ?? ""`);
+        if (!/already exists/.test(dupError)) fail(`duplicate error: "${dupError}"`);
+        await page.pressText("Cancel");
+
+        await page.reload();
+        const names = (await page.boardList()).map((b) => b.name).sort().join();
+        expect({ names }, { names: "Product roadmap,Second" });
+        expect({ header: await page.evaluate(`document.querySelector('[data-active-board-name]').textContent`) }, { header: "Second" });
+      },
+    },
+    {
+      name: "P3: boards are isolated — each keeps its own elements, and selection doesn't leak",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.selectTool("Select");
+        await page.click({ x: spots.rect[0].x + 20, y: spots.rect[0].y });
+        expect({ selected: (await page.selection()).ids.length }, { selected: 1 });
+        const onFirst = await page.elements();
+
+        await page.createBoard("Board B");
+        expect({ emptyB: (await page.elements()).length, selected: (await page.selection()).ids.length }, { emptyB: 0, selected: 0 });
+        expect(await page.history(), { undo: 0, redo: 0 });
+        await page.closeMenu();
+        await page.selectTool("Ellipse");
+        await page.drag(...spots.rect2);
+        const onSecond = await page.elements();
+
+        const boards = await page.boardList();
+        await page.click(await rowCenter(page, boards.find((b) => b.name === "Untitled board").id));
+        await sleep(300);
+        nearDeep(fail, "first board", await page.elements(), onFirst);
+        expect({ selected: (await page.selection()).ids.length, undo: (await page.history()).undo }, { selected: 0, undo: 0 });
+
+        await page.click(await rowCenter(page, boards.find((b) => b.name === "Board B").id));
+        await sleep(300);
+        nearDeep(fail, "second board", await page.elements(), onSecond);
+      },
+    },
+    {
+      name: "P4: each board restores its own viewport, also after a reload",
+      async run(expect) {
+        await page.press("Zoom in");
+        await page.press("Zoom in");
+        expect({ a: (await page.view()).percent }, { a: 144 });
+        await page.createBoard("Board B");
+        expect({ b: (await page.view()).percent }, { b: 100 });
+        await page.closeMenu();
+        await page.press("Zoom out");
+        expect({ b: (await page.view()).percent }, { b: 83 });
+
+        const boards = await page.boardList();
+        await page.click(await rowCenter(page, boards.find((b) => b.name === "Untitled board").id));
+        await sleep(300);
+        expect({ backOnA: (await page.view()).percent }, { backOnA: 144 });
+
+        await page.reload();
+        expect({ reloadedA: (await page.view()).percent }, { reloadedA: 144 });
+        const after = await page.boardList();
+        await page.click(await rowCenter(page, after.find((b) => b.name === "Board B").id));
+        await sleep(300);
+        expect({ reloadedB: (await page.view()).percent }, { reloadedB: 83 });
+      },
+    },
+    {
+      name: "P5: deleting a board, the active board, and the last board (with confirmation)",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.createBoard("Keep me");
+        await page.createBoard("Delete me");
+
+        // Cancel keeps it. (Creating a board closes the menu, so reopen it.)
+        await page.openMenu();
+        await page.press("Delete Keep me");
+        await page.pressText("Cancel");
+        expect({ count: (await page.boardList()).length }, { count: 3 });
+
+        // Inactive board.
+        await page.openMenu();
+        await page.press("Delete Keep me");
+        await page.pressText("Delete board");
+        await sleep(200);
+        let boards = await page.boardList();
+        expect({ names: boards.map((b) => b.name).sort().join(), active: boards.find((b) => b.active)?.name }, { names: "Delete me,Untitled board", active: "Delete me" });
+
+        // Active board → moves to the remaining one, with its content.
+        await page.openMenu();
+        await page.press("Delete Delete me");
+        await page.pressText("Delete board");
+        await sleep(300);
+        boards = await page.boardList();
+        expect({ names: boards.map((b) => b.name).join(), active: boards[0]?.active }, { names: "Untitled board", active: true });
+        expect({ elementsBack: (await page.elements()).length }, { elementsBack: 1 });
+
+        // Last board → a new empty default board replaces it.
+        await page.openMenu();
+        await page.press("Delete Untitled board");
+        await page.pressText("Delete board");
+        await sleep(300);
+        boards = await page.boardList();
+        expect({ count: boards.length, empty: (await page.elements()).length }, { count: 1, empty: 0 });
+        if (boards[0]?.name !== "Untitled board") fail(`new board name ${boards[0]?.name}`);
+
+        await page.reload();
+        expect({ afterReload: (await page.boardList()).length, elements: (await page.elements()).length }, { afterReload: 1, elements: 0 });
+      },
+    },
+    {
+      name: "P6: undo / redo results are saved and survive a reload",
+      async run(expect) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.drag(...spots.rect2);
+        await undo(page, mode);
+        expect({ status: await page.waitForSave() }, { status: "saved" });
+        await page.reload();
+        expect({ afterUndo: (await page.elements()).length }, { afterUndo: 1 });
+
+        await page.selectTool("Line"); // the tool isn't saved, so a reload starts on Select
+        await page.drag(...spots.line);
+        await undo(page, mode);
+        await redo(page, mode);
+        expect({ status: await page.waitForSave() }, { status: "saved" });
+        await page.reload();
+        expect({ afterRedo: (await page.elements()).length }, { afterRedo: 2 });
+      },
+    },
+    {
+      name: "P7: switching boards immediately after an edit loses nothing",
+      async run(expect, fail) {
+        await page.createBoard("Board B");
+        const firstId = (await page.boardList()).find((b) => b.name === "Untitled board").id;
+        await page.closeMenu();
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        const drawn = await page.elements();
+        // Switch within milliseconds of the edit — far inside the 400ms autosave debounce.
+        const statusAtSwitch = await page.evaluate(`(async () => {
+          const status = document.querySelector('[data-save-status]')?.getAttribute('data-save-status');
+          document.querySelector('[aria-label="Open board menu"]').click();
+          await new Promise((r) => setTimeout(r, 0));
+          document.querySelector('[data-board-id="${firstId}"] button').click();
+          return status;
+        })()`);
+        expect({ editStillPendingWhenSwitching: statusAtSwitch }, { editStillPendingWhenSwitching: "pending" });
+        await sleep(300);
+        expect({ otherBoard: (await page.elements()).length }, { otherBoard: 0 });
+
+        await page.reload();
+        const after = await page.boardList();
+        await page.click(await rowCenter(page, after.find((b) => b.name === "Board B").id));
+        await sleep(300);
+        nearDeep(fail, "edit survived the switch", await page.elements(), drawn);
+      },
+    },
+    {
+      name: "P8: a failed save is shown, nothing claims 'Saved', and Retry recovers",
+      async run(expect) {
+        await page.evaluate(`(() => {
+          window.__realPut = IDBObjectStore.prototype.put;
+          IDBObjectStore.prototype.put = function () { throw new DOMException('Simulated quota', 'QuotaExceededError'); };
+        })()`);
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        expect({ status: await page.waitForSave("error") }, { status: "error" });
+        await sleep(600);
+        expect({ stillError: await page.saveStatus() }, { stillError: "error" });
+
+        await page.evaluate(`IDBObjectStore.prototype.put = window.__realPut`);
+        await page.pressText("Retry");
+        expect({ status: await page.waitForSave() }, { status: "saved" });
+        await page.reload();
+        expect({ recovered: (await page.elements()).length }, { recovered: 1 });
+      },
+    },
+    {
+      name: "P9: a corrupt board is reported, listed as unreadable, and left untouched",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.createBoard("Broken");
+        await sleep(300);
+        const brokenId = (await page.boardList()).find((b) => b.name === "Broken").id;
+        const corrupt = { id: brokenId, schemaVersion: 1, elements: [{ id: 7, type: "rectangle" }], viewport: { x: 0, y: 0, zoom: 1 } };
+        await page.evaluate(`new Promise((resolve, reject) => {
+          const open = indexedDB.open('collabboard');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('documents', 'readwrite');
+            tx.objectStore('documents').put(${JSON.stringify(corrupt)});
+            tx.oncomplete = () => { open.result.close(); resolve(true); };
+            tx.onerror = () => reject(tx.error);
+          };
+        })`);
+
+        await page.reload();
+        const boards = await page.boardList();
+        const broken = boards.find((b) => b.id === brokenId);
+        expect({ unreadable: broken?.unreadable, activeIsOther: boards.find((b) => b.active)?.name }, { unreadable: true, activeIsOther: "Untitled board" });
+        if (!(await page.evaluate(`!!document.querySelector('[data-board-notice]')`))) fail("no notice about the unreadable board");
+        expect({ otherBoardFine: (await page.elements()).length }, { otherBoardFine: 1 });
+
+        const stored = await page.evaluate(`new Promise((resolve) => {
+          const open = indexedDB.open('collabboard');
+          open.onsuccess = () => {
+            const request = open.result.transaction('documents').objectStore('documents').get(${JSON.stringify(brokenId)});
+            request.onsuccess = () => { open.result.close(); resolve(request.result); };
+          };
+        })`);
+        nearDeep(fail, "corrupt record untouched", stored, corrupt);
+      },
+    },
+    {
+      name: "P10: switching boards mid-drag cancels the drag; nothing moves on either board",
+      skip: touchOnly && "needs the mouse held while switching",
+      async run(expect, fail) {
+        const spots = navSpots(mode);
+        await page.drag(...spots.rect);
+        await page.createBoard("Board B");
+        await page.drag(...spots.rect);
+        const onB = await page.elements();
+        await page.selectTool("Select");
+        const boards = await page.boardList();
+        const firstId = boards.find((b) => b.name === "Untitled board").id;
+        await page.closeMenu();
+
+        const hit = { x: spots.rect[0].x + 20, y: spots.rect[0].y };
+        await page.drag(hit, { x: hit.x + 60, y: hit.y + 40 }, { release: false });
+        await page.evaluate(`window.__boardRow = ${JSON.stringify(firstId)}`);
+        await page.evaluate(`(async () => {
+          document.querySelector('[aria-label="Open board menu"]').click();
+          await new Promise((r) => setTimeout(r, 50));
+          document.querySelector('[data-board-id="' + window.__boardRow + '"] button').click();
+        })()`);
+        await sleep(400);
+        await page.pointerMove(hit.x + 80, hit.y + 60);
+        await page.pointerUp(hit.x + 80, hit.y + 60);
+        const onA = await page.elements();
+        expect({ onA: onA.length, undo: (await page.history()).undo }, { onA: 1, undo: 0 });
+
+        const back = await page.boardList();
+        await page.click(await rowCenter(page, back.find((b) => b.name === "Board B").id));
+        await sleep(300);
+        nearDeep(fail, "board B unmoved", await page.elements(), onB);
+      },
+    },
   ];
+}
+
+/** Centre of a board row's main button in the (open) board menu. */
+async function rowCenter(page, boardId) {
+  await page.openMenu();
+  await sleep(150);
+  return page.evaluate(`(() => {
+    const button = document.querySelector('[data-board-id="${boardId}"] button');
+    const r = button.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  })()`);
 }
 
 /** Undo by keyboard on desktop, by the toolbar button on touch. */
@@ -1746,7 +2125,7 @@ async function runSuite(browser, { label, url, mode }) {
 
   for (const test of defineTests(page, mode)) {
     // ONLY=S2 runs just the tests whose name starts with "S2" (handy while debugging).
-    if (process.env.ONLY && !test.name.startsWith(process.env.ONLY)) continue;
+    if (process.env.ONLY && !process.env.ONLY.split(",").some((prefix) => test.name.startsWith(prefix))) continue;
     if (test.skip) {
       console.log(`  - skip  ${test.name}  (${test.skip})`);
       continue;

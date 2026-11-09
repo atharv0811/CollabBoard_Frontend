@@ -1,4 +1,5 @@
-import { CircleQuestionMark, Users, Wifi } from "lucide-react";
+import { CircleQuestionMark, Users } from "lucide-react";
+import { SaveStatusIndicator } from "@/features/boards/components/SaveStatusIndicator";
 import { Divider } from "@/components/common/Divider";
 import { IconButton } from "@/components/common/IconButton";
 import { Tooltip } from "@/components/common/Tooltip";
@@ -22,18 +23,8 @@ export function StatusBar({ className }: StatusBarProps) {
         <ViewportControls />
         <HistoryControls />
       </div>
-      <div
-        role="status"
-        className="surface-floating pointer-events-auto flex h-9 items-center gap-2.5 px-3 text-xs text-muted-foreground"
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="relative flex size-2">
-            <span className="absolute inset-0 rounded-full bg-success/40" />
-            <span className="relative m-auto size-1.5 rounded-full bg-success" />
-          </span>
-          <Wifi aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
-          <span>Connected</span>
-        </span>
+      <div className="surface-floating pointer-events-auto flex h-9 items-center gap-2.5 px-3 text-xs text-muted-foreground">
+        <SaveStatusIndicator />
         <Divider orientation="vertical" className="h-4" />
         <span className="flex items-center gap-1.5">
           <Users aria-hidden="true" className="size-3.5" strokeWidth={1.75} />

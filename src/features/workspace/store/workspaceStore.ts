@@ -14,7 +14,13 @@ import {
 import type { ToolId } from "../data/tools.ts";
 import { deepEqual, emptyHistory, recordEdit, redoStep, undoStep, type History } from "./history.ts";
 
+export interface LoadedDocument {
+  elements: CanvasElement[];
+  viewport: Viewport;
+}
+
 export interface WorkspaceState {
+  boardId: string | null;
   elements: CanvasElement[];
   history: History<CanvasElement[]>;
   selectedIds: string[];
@@ -24,6 +30,7 @@ export interface WorkspaceState {
 }
 
 export interface WorkspaceActions {
+  loadDocument: (boardId: string, document: LoadedDocument) => void;
   addElement: (element: CanvasElement) => void;
   updateElements: (updated: readonly CanvasElement[]) => void;
   deleteElements: (ids: readonly string[]) => void;
@@ -60,6 +67,7 @@ const pruneSelection = (selectedIds: string[], elements: readonly CanvasElement[
 };
 
 export const initialWorkspaceState: WorkspaceState = {
+  boardId: null,
   elements: [],
   history: emptyHistory(),
   selectedIds: [],
@@ -92,6 +100,15 @@ export const createWorkspaceStore = () =>
 
     return {
       ...initialWorkspaceState,
+
+      loadDocument: (boardId, document) =>
+        set({
+          boardId,
+          elements: document.elements,
+          viewport: document.viewport,
+          history: emptyHistory(),
+          selectedIds: [],
+        }),
 
       addElement: (element) => commit([...get().elements, element]),
 

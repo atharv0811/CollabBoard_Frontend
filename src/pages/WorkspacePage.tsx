@@ -1,3 +1,7 @@
+import { useBoardPersistence } from "@/features/boards/boardSession";
+import { BoardDialogs } from "@/features/boards/components/BoardDialogs";
+import { BoardNotice, BoardsGate } from "@/features/boards/components/BoardsGate";
+import { SaveStatusIndicator } from "@/features/boards/components/SaveStatusIndicator";
 import { CanvasContextBar } from "@/features/workspace/components/CanvasContextBar";
 import { CanvasSurface } from "@/features/workspace/components/CanvasSurface";
 import { HistoryControls } from "@/features/workspace/components/HistoryControls";
@@ -9,7 +13,7 @@ import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolb
 import { useWorkspaceShortcuts } from "@/features/workspace/hooks/useWorkspaceShortcuts";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 
-export default function WorkspacePage() {
+function Workspace() {
   const activeTool = useWorkspaceStore((state) => state.activeTool);
   const setActiveTool = useWorkspaceStore((state) => state.setActiveTool);
   useWorkspaceShortcuts();
@@ -20,6 +24,11 @@ export default function WorkspacePage() {
 
       <WorkspaceMenu className="absolute top-(--workspace-gutter) left-(--workspace-gutter) z-(--z-panel)" />
 
+      <SaveStatusIndicator
+        floating
+        className="absolute top-(--workspace-gutter) left-[calc(var(--workspace-gutter)+3.25rem)] z-(--z-overlay) lg:hidden"
+      />
+
       <div className="absolute top-(--workspace-gutter) left-1/2 z-(--z-overlay) hidden -translate-x-1/2 flex-col items-center gap-3 lg:flex">
         <WorkspaceToolbar
           activeTool={activeTool}
@@ -29,6 +38,8 @@ export default function WorkspacePage() {
       </div>
 
       <WorkspaceHeader className="absolute top-(--workspace-gutter) right-(--workspace-gutter) z-(--z-panel)" />
+
+      <BoardNotice className="absolute top-[calc(var(--workspace-gutter)+3.5rem)] left-1/2 z-(--z-panel) -translate-x-1/2 lg:top-[calc(var(--workspace-gutter)+6.5rem)]" />
 
       <div className="pointer-events-none absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) flex flex-col items-center gap-3 lg:hidden">
         <div className="flex w-full items-center justify-between gap-2">
@@ -44,6 +55,18 @@ export default function WorkspacePage() {
       </div>
 
       <StatusBar className="absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) hidden lg:grid" />
+
+      <BoardDialogs />
     </div>
+  );
+}
+
+export default function WorkspacePage() {
+  useBoardPersistence();
+
+  return (
+    <BoardsGate>
+      <Workspace />
+    </BoardsGate>
   );
 }

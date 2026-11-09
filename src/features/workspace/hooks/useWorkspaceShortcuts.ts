@@ -11,6 +11,7 @@ export function useWorkspaceShortcuts() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.isComposing || isEditableTarget(event.target)) return;
+      if (event.target instanceof Element && event.target.closest("dialog")) return;
       const store = useWorkspaceStore.getState();
 
       const historyAction = historyShortcut(event);

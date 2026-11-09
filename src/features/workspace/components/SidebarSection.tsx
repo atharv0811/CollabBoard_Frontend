@@ -5,12 +5,14 @@ interface SidebarSectionProps {
   title?: string;
   items: MenuItem[];
   activeId?: string;
+  onItemClick?: (id: string) => void;
 }
 
 export function SidebarSection({
   title,
   items,
   activeId,
+  onItemClick,
 }: SidebarSectionProps) {
   const headingId = title
     ? `sidebar-${title.toLowerCase().replace(/\s+/g, "-")}`
@@ -32,6 +34,7 @@ export function SidebarSection({
             key={item.id}
             item={item}
             active={item.id === activeId}
+            onClick={onItemClick ? () => onItemClick(item.id) : undefined}
           />
         ))}
       </ul>
