@@ -2,6 +2,7 @@ import { createId } from "@/lib/createId";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import type { ToolId } from "../data/tools";
+import { useCanvasViewport } from "../hooks/useCanvasViewport";
 
 interface CanvasSurfaceProps {
   className?: string;
@@ -15,7 +16,6 @@ interface Rectangle {
   y: number;
   width: number;
   height: number;
-  stroke: string;
   fill: string;
 }
 
@@ -24,36 +24,31 @@ interface Point {
   y: number;
 }
 
+function getCanvasPoint(
+  event: React.PointerEvent<SVGSVGElement>,
+): Point | null {
+  const matrix = event.currentTarget.getScreenCTM();
+  if (!matrix) return null;
+
+  const inverse = matrix.inverse();
+  const { x, y } = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+    inverse,
+  );
+
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+}
+
 export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
   const [rectangles, setRectangles] = useState<Rectangle[]>([]);
   const [startPoint, setStartPoint] = useState<Point | null>(null);
   const [currentPoint, setCurrentPoint] = useState<Point | null>(null);
-
-  function getCanvasPoint(event: React.PointerEvent<SVGSVGElement>): Point {
-    const svg = event.currentTarget;
-    const matrix = svg.getScreenCTM();
-
-    if (!matrix) {
-      return { x: 0, y: 0 };
-    }
-
-    const point = svg.createSVGPoint();
-
-    point.x = event.clientX;
-    point.y = event.clientY;
-
-    const transformedPoint = point.matrixTransform(matrix.inverse());
-
-    return {
-      x: transformedPoint.x,
-      y: transformedPoint.y,
-    };
-  }
+  const viewport = useCanvasViewport<SVGSVGElement>();
 
   const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
     if (activeTool !== "rectangle") return;
 
     const point = getCanvasPoint(event);
+    if (!point) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
 
@@ -65,16 +60,18 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
     if (!startPoint) return;
 
     const point = getCanvasPoint(event);
-    setCurrentPoint(point);
+    if (point) setCurrentPoint(point);
   };
 
   const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
     if (!startPoint) return;
 
-    const endPoint = getCanvasPoint(event);
+    const endPoint = getCanvasPoint(event) ?? currentPoint;
 
     setStartPoint(null);
     setCurrentPoint(null);
+
+    if (!endPoint) return;
 
     const rectangle: Rectangle = {
       id: createId(),
@@ -83,7 +80,6 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
       y: Math.min(startPoint.y, endPoint.y),
       width: Math.abs(endPoint.x - startPoint.x),
       height: Math.abs(endPoint.y - startPoint.y),
-      stroke: "#fff",
       fill: "transparent",
     };
 
@@ -106,9 +102,14 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
       )}
     >
       <svg
-        className="h-full w-full touch-none select-none"
-        viewBox="0 0 1200 800"
-        preserveAspectRatio="none"
+        ref={viewport.ref}
+        className="h-full w-full touch-none select-none text-foreground"
+        viewBox={
+          viewport.isReady
+            ? `0 0 ${viewport.width} ${viewport.height}`
+            : undefined
+        }
+        preserveAspectRatio="xMinYMin meet"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -123,7 +124,7 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
             y={rectangle.y}
             width={rectangle.width}
             height={rectangle.height}
-            stroke={rectangle.stroke}
+            stroke="currentColor"
             fill={rectangle.fill}
             strokeWidth={2}
           />
@@ -136,7 +137,7 @@ export function CanvasSurface({ className, activeTool }: CanvasSurfaceProps) {
             y={Math.min(startPoint.y, currentPoint.y)}
             width={Math.abs(currentPoint.x - startPoint.x)}
             height={Math.abs(currentPoint.y - startPoint.y)}
-            stroke="#fff"
+            stroke="currentColor"
             fill="transparent"
             strokeWidth={2}
           />
