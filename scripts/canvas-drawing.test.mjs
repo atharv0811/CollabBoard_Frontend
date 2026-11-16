@@ -125,20 +125,10 @@ function createPage(browser, { url, mode }) {
     await sleep(400);
   }
 
-  /** Opens a fresh workspace: saved boards from earlier tests are wiped first. */
+  /** Opens a fresh workspace: boards live only in memory, so a navigation resets them. */
   async function open() {
     await resize(initialSize.width, initialSize.height);
     await send("Emulation.setTouchEmulationEnabled", { enabled: touch, maxTouchPoints: touch ? 5 : 1 });
-    browser.exceptions.length = 0;
-    // Cleared without navigating away: after a multi-touch sequence, any intermediate
-    // navigation (about:blank, '/') leaves Chrome's emulated touch input dead on the
-    // next page (verified). The app closes its connection on `versionchange`.
-    await send("Storage.clearDataForOrigin", { origin: new URL(url).origin, storageTypes: "indexeddb" });
-    await load();
-  }
-
-  /** Reloads the workspace keeping saved data (what a browser refresh does). */
-  async function reload() {
     browser.exceptions.length = 0;
     await load();
   }
@@ -390,7 +380,6 @@ function createPage(browser, { url, mode }) {
       id: row.getAttribute('data-board-id'),
       name: row.querySelector('[data-board-name]')?.textContent ?? row.textContent.trim(),
       active: !!row.querySelector('[aria-current="page"]'),
-      unreadable: row.hasAttribute('data-unreadable'),
     }))`);
   }
 
@@ -424,22 +413,6 @@ function createPage(browser, { url, mode }) {
     await sleep(80);
   }
 
-  async function saveStatus() {
-    return evaluate(`[...document.querySelectorAll('[data-save-status]')].find((el) => el.getClientRects().length)?.getAttribute('data-save-status') ?? null`);
-  }
-
-  /** Waits until the visible save indicator reports `status` (default: saved). */
-  async function waitForSave(status = "saved", timeout = 4000) {
-    const deadline = Date.now() + timeout;
-    let current = null;
-    while (Date.now() < deadline) {
-      current = await saveStatus();
-      if (current === status) return current;
-      await sleep(80);
-    }
-    return current;
-  }
-
   async function createBoard(name) {
     await openMenu();
     await press("New board");
@@ -461,7 +434,7 @@ function createPage(browser, { url, mode }) {
     dropPointerCapture, mouseClickDrag, pointerDown, pointerMove, pointerUp, touch,
     selection, click, key, evaluate, hover, canvasCursor,
     wheel, press, view, screenBoxes, send, modKey, history,
-    reload, boardList, openMenu, closeMenu, pressText, type, saveStatus, waitForSave, createBoard,
+    boardList, openMenu, closeMenu, pressText, type, createBoard,
   };
 }
 
@@ -1669,28 +1642,18 @@ function defineTests(page, mode) {
       },
     },
 
-    // ---- Milestone 6: persistence and boards
+    // ---- Milestone 6: boards (in-memory state)
 
     {
-      name: "P1: first launch opens an empty 'Untitled board'; drawings survive a reload exactly",
-      async run(expect, fail) {
+      name: "P1: first launch opens an empty 'Untitled board'",
+      async run(expect) {
         const boards = await page.boardList();
         expect({ count: boards.length, name: boards[0]?.name, active: boards[0]?.active }, { count: 1, name: "Untitled board", active: true });
-        await page.closeMenu();
-        expect({ status: await page.saveStatus() }, { status: "saved" });
-
-        await drawAll(page, mode);
-        expect({ status: await page.waitForSave() }, { status: "saved" });
-        const drawn = await page.elements();
-
-        await page.reload();
-        nearDeep(fail, "restored after reload", await page.elements(), drawn);
-        expect({ ids: (await page.elements()).map((el) => el.id).join() }, { ids: drawn.map((el) => el.id).join() });
-        expect(await page.history(), { undo: 0, redo: 0 });
+        expect({ elements: (await page.elements()).length }, { elements: 0 });
       },
     },
     {
-      name: "P2: renaming persists across reloads; empty and duplicate names are refused",
+      name: "P2: renaming a board; empty and duplicate names are refused",
       async run(expect, fail) {
         const [board] = await page.boardList();
         await page.press(`Rename ${board.name}`);
@@ -1713,7 +1676,6 @@ function defineTests(page, mode) {
         if (!/already exists/.test(dupError)) fail(`duplicate error: "${dupError}"`);
         await page.pressText("Cancel");
 
-        await page.reload();
         const names = (await page.boardList()).map((b) => b.name).sort().join();
         expect({ names }, { names: "Product roadmap,Second" });
         expect({ header: await page.evaluate(`document.querySelector('[data-active-board-name]').textContent`) }, { header: "Second" });
@@ -1749,7 +1711,7 @@ function defineTests(page, mode) {
       },
     },
     {
-      name: "P4: each board restores its own viewport, also after a reload",
+      name: "P4: each board restores its own viewport",
       async run(expect) {
         await page.press("Zoom in");
         await page.press("Zoom in");
@@ -1765,12 +1727,9 @@ function defineTests(page, mode) {
         await sleep(300);
         expect({ backOnA: (await page.view()).percent }, { backOnA: 144 });
 
-        await page.reload();
-        expect({ reloadedA: (await page.view()).percent }, { reloadedA: 144 });
-        const after = await page.boardList();
-        await page.click(await rowCenter(page, after.find((b) => b.name === "Board B").id));
+        await page.click(await rowCenter(page, boards.find((b) => b.name === "Board B").id));
         await sleep(300);
-        expect({ reloadedB: (await page.view()).percent }, { reloadedB: 83 });
+        expect({ backOnB: (await page.view()).percent }, { backOnB: 83 });
       },
     },
     {
@@ -1812,29 +1771,6 @@ function defineTests(page, mode) {
         boards = await page.boardList();
         expect({ count: boards.length, empty: (await page.elements()).length }, { count: 1, empty: 0 });
         if (boards[0]?.name !== "Untitled board") fail(`new board name ${boards[0]?.name}`);
-
-        await page.reload();
-        expect({ afterReload: (await page.boardList()).length, elements: (await page.elements()).length }, { afterReload: 1, elements: 0 });
-      },
-    },
-    {
-      name: "P6: undo / redo results are saved and survive a reload",
-      async run(expect) {
-        const spots = navSpots(mode);
-        await page.drag(...spots.rect);
-        await page.drag(...spots.rect2);
-        await undo(page, mode);
-        expect({ status: await page.waitForSave() }, { status: "saved" });
-        await page.reload();
-        expect({ afterUndo: (await page.elements()).length }, { afterUndo: 1 });
-
-        await page.selectTool("Line"); // the tool isn't saved, so a reload starts on Select
-        await page.drag(...spots.line);
-        await undo(page, mode);
-        await redo(page, mode);
-        expect({ status: await page.waitForSave() }, { status: "saved" });
-        await page.reload();
-        expect({ afterRedo: (await page.elements()).length }, { afterRedo: 2 });
       },
     },
     {
@@ -1846,79 +1782,18 @@ function defineTests(page, mode) {
         const spots = navSpots(mode);
         await page.drag(...spots.rect);
         const drawn = await page.elements();
-        // Switch within milliseconds of the edit — far inside the 400ms autosave debounce.
-        const statusAtSwitch = await page.evaluate(`(async () => {
-          const status = document.querySelector('[data-save-status]')?.getAttribute('data-save-status');
+        await page.evaluate(`(async () => {
           document.querySelector('[aria-label="Open board menu"]').click();
           await new Promise((r) => setTimeout(r, 0));
           document.querySelector('[data-board-id="${firstId}"] button').click();
-          return status;
         })()`);
-        expect({ editStillPendingWhenSwitching: statusAtSwitch }, { editStillPendingWhenSwitching: "pending" });
         await sleep(300);
         expect({ otherBoard: (await page.elements()).length }, { otherBoard: 0 });
 
-        await page.reload();
         const after = await page.boardList();
         await page.click(await rowCenter(page, after.find((b) => b.name === "Board B").id));
         await sleep(300);
         nearDeep(fail, "edit survived the switch", await page.elements(), drawn);
-      },
-    },
-    {
-      name: "P8: a failed save is shown, nothing claims 'Saved', and Retry recovers",
-      async run(expect) {
-        await page.evaluate(`(() => {
-          window.__realPut = IDBObjectStore.prototype.put;
-          IDBObjectStore.prototype.put = function () { throw new DOMException('Simulated quota', 'QuotaExceededError'); };
-        })()`);
-        const spots = navSpots(mode);
-        await page.drag(...spots.rect);
-        expect({ status: await page.waitForSave("error") }, { status: "error" });
-        await sleep(600);
-        expect({ stillError: await page.saveStatus() }, { stillError: "error" });
-
-        await page.evaluate(`IDBObjectStore.prototype.put = window.__realPut`);
-        await page.pressText("Retry");
-        expect({ status: await page.waitForSave() }, { status: "saved" });
-        await page.reload();
-        expect({ recovered: (await page.elements()).length }, { recovered: 1 });
-      },
-    },
-    {
-      name: "P9: a corrupt board is reported, listed as unreadable, and left untouched",
-      async run(expect, fail) {
-        const spots = navSpots(mode);
-        await page.drag(...spots.rect);
-        await page.createBoard("Broken");
-        await sleep(300);
-        const brokenId = (await page.boardList()).find((b) => b.name === "Broken").id;
-        const corrupt = { id: brokenId, schemaVersion: 1, elements: [{ id: 7, type: "rectangle" }], viewport: { x: 0, y: 0, zoom: 1 } };
-        await page.evaluate(`new Promise((resolve, reject) => {
-          const open = indexedDB.open('collabboard');
-          open.onsuccess = () => {
-            const tx = open.result.transaction('documents', 'readwrite');
-            tx.objectStore('documents').put(${JSON.stringify(corrupt)});
-            tx.oncomplete = () => { open.result.close(); resolve(true); };
-            tx.onerror = () => reject(tx.error);
-          };
-        })`);
-
-        await page.reload();
-        const boards = await page.boardList();
-        const broken = boards.find((b) => b.id === brokenId);
-        expect({ unreadable: broken?.unreadable, activeIsOther: boards.find((b) => b.active)?.name }, { unreadable: true, activeIsOther: "Untitled board" });
-        if (!(await page.evaluate(`!!document.querySelector('[data-board-notice]')`))) fail("no notice about the unreadable board");
-        expect({ otherBoardFine: (await page.elements()).length }, { otherBoardFine: 1 });
-
-        const stored = await page.evaluate(`new Promise((resolve) => {
-          const open = indexedDB.open('collabboard');
-          open.onsuccess = () => {
-            const request = open.result.transaction('documents').objectStore('documents').get(${JSON.stringify(brokenId)});
-            request.onsuccess = () => { open.result.close(); resolve(request.result); };
-          };
-        })`);
-        nearDeep(fail, "corrupt record untouched", stored, corrupt);
       },
     },
     {

@@ -4,7 +4,6 @@ import {
   type Viewport,
 } from "../workspace/canvas/viewport.ts";
 
-export const BOARD_SCHEMA_VERSION = 1;
 export const DEFAULT_BOARD_NAME = "Untitled board";
 export const MAX_BOARD_NAME_LENGTH = 80;
 
@@ -69,6 +68,3 @@ export function nextDefaultName(
     if (!taken.has(candidate.toLocaleLowerCase())) return candidate;
   }
 }
-
-export const byMostRecent = (a: BoardMeta, b: BoardMeta) =>
-  b.updatedAt - a.updatedAt;

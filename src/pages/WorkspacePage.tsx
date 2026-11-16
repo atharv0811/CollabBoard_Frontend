@@ -1,6 +1,4 @@
-import { useBoardPersistence } from "@/features/boards/boardSession";
 import { BoardDialogs } from "@/features/boards/components/BoardDialogs";
-import { BoardNotice, BoardsGate } from "@/features/boards/components/BoardsGate";
 import { SaveStatusIndicator } from "@/features/boards/components/SaveStatusIndicator";
 import { CanvasContextBar } from "@/features/workspace/components/CanvasContextBar";
 import { CanvasSurface } from "@/features/workspace/components/CanvasSurface";
@@ -13,7 +11,7 @@ import { WorkspaceToolbar } from "@/features/workspace/components/WorkspaceToolb
 import { useWorkspaceShortcuts } from "@/features/workspace/hooks/useWorkspaceShortcuts";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 
-function Workspace() {
+export default function WorkspacePage() {
   const activeTool = useWorkspaceStore((state) => state.activeTool);
   const setActiveTool = useWorkspaceStore((state) => state.setActiveTool);
   useWorkspaceShortcuts();
@@ -39,8 +37,6 @@ function Workspace() {
 
       <WorkspaceHeader className="absolute top-(--workspace-gutter) right-(--workspace-gutter) z-(--z-panel)" />
 
-      <BoardNotice className="absolute top-[calc(var(--workspace-gutter)+3.5rem)] left-1/2 z-(--z-panel) -translate-x-1/2 lg:top-[calc(var(--workspace-gutter)+6.5rem)]" />
-
       <div className="pointer-events-none absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) flex flex-col items-center gap-3 lg:hidden">
         <div className="flex w-full items-center justify-between gap-2">
           <HistoryControls />
@@ -58,15 +54,5 @@ function Workspace() {
 
       <BoardDialogs />
     </div>
-  );
-}
-
-export default function WorkspacePage() {
-  useBoardPersistence();
-
-  return (
-    <BoardsGate>
-      <Workspace />
-    </BoardsGate>
   );
 }

@@ -1,7 +1,6 @@
 import { Logo } from "@/components/common/Logo";
 import { cn } from "@/lib/utils";
 import { useBoardsStore } from "@/features/boards/boardsStore";
-import { boardSession } from "@/features/boards/boardSession";
 import { BoardsSection } from "@/features/boards/components/BoardsSection";
 import { mainActions } from "../data/menuItems";
 import { SidebarFooter } from "./SidebarFooter";
@@ -18,7 +17,7 @@ export function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
   const openDialog = useBoardsStore((state) => state.openDialog);
 
   const onAction = (id: string) => {
-    if (id === "new" && !boardSession.isTemporary) openDialog({ kind: "create" });
+    if (id === "new") openDialog({ kind: "create" });
   };
 
   return (
