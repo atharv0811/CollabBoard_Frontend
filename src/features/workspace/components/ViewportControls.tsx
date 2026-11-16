@@ -29,7 +29,7 @@ export function ViewportControls({ className, tooltipSide = "top" }: ViewportCon
     <div
       role="toolbar"
       aria-label="Zoom controls"
-      className={cn("surface-floating pointer-events-auto flex h-9 items-center gap-0.5 px-0.5", className)}
+      className={cn("pointer-events-auto flex h-9 items-center gap-0.5 surface-floating px-0.5", className)}
     >
       {control(Minus, "Zoom out", zoomOut, zoom <= MIN_ZOOM)}
       <output

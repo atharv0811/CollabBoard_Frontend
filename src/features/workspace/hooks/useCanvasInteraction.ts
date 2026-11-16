@@ -9,24 +9,10 @@ import {
 } from "react";
 import { createId } from "@/lib/createId";
 import { createScreenToWorld } from "../canvas/coordinates";
-import {
-  elementFromDraft,
-  startDraft,
-  updateDraft,
-  type DrawingDraft,
-} from "../canvas/drafts";
-import {
-  isDrawingTool,
-  type CanvasElement,
-  type Point,
-} from "../canvas/elements";
+import { elementFromDraft, startDraft, updateDraft, type DrawingDraft } from "../canvas/drafts";
+import { isDrawingTool, type CanvasElement, type Point } from "../canvas/elements";
 import { boundsFromPoints, distance, type Bounds } from "../canvas/geometry";
-import {
-  elementBounds,
-  elementsInMarquee,
-  hitTolerance,
-  unionBounds,
-} from "../canvas/hitTest";
+import { elementBounds, elementsInMarquee, hitTolerance, unionBounds } from "../canvas/hitTest";
 import {
   cursorForDecision,
   decidePointerDown,
@@ -44,12 +30,7 @@ import {
   type EndpointId,
   type HandleId,
 } from "../canvas/transform";
-import {
-  panBy,
-  pinchViewport,
-  type PinchStart,
-  type Viewport,
-} from "../canvas/viewport";
+import { panBy, pinchViewport, type PinchStart, type Viewport } from "../canvas/viewport";
 import { useWorkspaceStore } from "../store/workspaceStore";
 
 type SvgPointerEvent = ReactPointerEvent<SVGSVGElement>;
@@ -57,47 +38,44 @@ type SvgPointerEvent = ReactPointerEvent<SVGSVGElement>;
 type Gesture =
   | { kind: "draw"; pointerId: number; draft: DrawingDraft }
   | {
-    kind: "move";
-    pointerId: number;
-    origin: Point;
-    originals: CanvasElement[];
-    previousSelection: string[];
-  }
+      kind: "move";
+      pointerId: number;
+      origin: Point;
+      originals: CanvasElement[];
+      previousSelection: string[];
+    }
   | {
-    kind: "resize";
-    pointerId: number;
-    origin: Point;
-    handle: HandleId;
-    bounds: Bounds;
-    originals: CanvasElement[];
-    minSize: number;
-  }
+      kind: "resize";
+      pointerId: number;
+      origin: Point;
+      handle: HandleId;
+      bounds: Bounds;
+      originals: CanvasElement[];
+      minSize: number;
+    }
   | {
-    kind: "endpoint";
-    pointerId: number;
-    origin: Point;
-    endpoint: EndpointId;
-    original: LinearElement;
-  }
+      kind: "endpoint";
+      pointerId: number;
+      origin: Point;
+      endpoint: EndpointId;
+      original: LinearElement;
+    }
   | {
-    kind: "marquee";
-    pointerId: number;
-    origin: Point;
-    baseSelection: string[];
-    previousSelection: string[];
-  }
+      kind: "marquee";
+      pointerId: number;
+      origin: Point;
+      baseSelection: string[];
+      previousSelection: string[];
+    }
   | {
-    kind: "pan";
-    pointerId: number;
-    startClient: Point;
-    startViewport: Viewport;
-  }
+      kind: "pan";
+      pointerId: number;
+      startClient: Point;
+      startViewport: Viewport;
+    }
   | { kind: "pinch"; pointerIds: [number, number]; start: PinchStart };
 
-type TransformGesture = Extract<
-  Gesture,
-  { kind: "move" | "resize" | "endpoint" }
->;
+type TransformGesture = Extract<Gesture, { kind: "move" | "resize" | "endpoint" }>;
 
 interface TrackedTouch {
   x: number;
@@ -109,19 +87,14 @@ interface TrackedTouch {
 const PINCH_TAKEOVER_SLOP = 10;
 
 const ownsPointer = (gesture: Gesture, pointerId: number) =>
-  gesture.kind === "pinch"
-    ? gesture.pointerIds.includes(pointerId)
-    : gesture.pointerId === pointerId;
+  gesture.kind === "pinch" ? gesture.pointerIds.includes(pointerId) : gesture.pointerId === pointerId;
 
 function worldSamples(event: SvgPointerEvent): Point[] {
   const toWorld = createScreenToWorld(event.currentTarget);
   if (!toWorld) return [];
 
   const native = event.nativeEvent;
-  const coalesced =
-    typeof native.getCoalescedEvents === "function"
-      ? native.getCoalescedEvents()
-      : [];
+  const coalesced = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
   const sources = coalesced.length > 0 ? coalesced : [native];
 
   const samples: Point[] = [];
@@ -132,26 +105,15 @@ function worldSamples(event: SvgPointerEvent): Point[] {
   return samples;
 }
 
-function transformedElements(
-  gesture: TransformGesture,
-  point: Point,
-): CanvasElement[] {
+function transformedElements(gesture: TransformGesture, point: Point): CanvasElement[] {
   const dx = point.x - gesture.origin.x;
   const dy = point.y - gesture.origin.y;
 
   switch (gesture.kind) {
     case "move":
-      return gesture.originals.map((element) =>
-        translateElement(element, dx, dy),
-      );
+      return gesture.originals.map((element) => translateElement(element, dx, dy));
     case "resize": {
-      const map = resizeMap(
-        gesture.bounds,
-        gesture.handle,
-        dx,
-        dy,
-        gesture.minSize,
-      );
+      const map = resizeMap(gesture.bounds, gesture.handle, dx, dy, gesture.minSize);
       return gesture.originals.map((element) => mapElement(element, map));
     }
     case "endpoint": {
@@ -166,8 +128,7 @@ function transformedElements(
   }
 }
 
-const toPreviewMap = (elements: readonly CanvasElement[]) =>
-  new Map(elements.map((element) => [element.id, element]));
+const toPreviewMap = (elements: readonly CanvasElement[]) => new Map(elements.map((element) => [element.id, element]));
 
 function pinchMetrics(svg: SVGSVGElement, a: TrackedTouch, b: TrackedTouch) {
   const rect = svg.getBoundingClientRect();
@@ -179,9 +140,7 @@ function pinchMetrics(svg: SVGSVGElement, a: TrackedTouch, b: TrackedTouch) {
 
 export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   const [draft, setDraft] = useState<DrawingDraft | null>(null);
-  const [preview, setPreview] = useState<Map<string, CanvasElement> | null>(
-    null,
-  );
+  const [preview, setPreview] = useState<Map<string, CanvasElement> | null>(null);
   const [marquee, setMarquee] = useState<Bounds | null>(null);
   const [cursor, setCursor] = useState<CanvasCursor>("default");
   const gestureRef = useRef<Gesture | null>(null);
@@ -198,10 +157,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     (restoreSelection: boolean) => {
       const gesture = gestureRef.current;
       if (!gesture) return;
-      if (
-        gesture.kind === "marquee" ||
-        (restoreSelection && gesture.kind === "move")
-      ) {
+      if (gesture.kind === "marquee" || (restoreSelection && gesture.kind === "move")) {
         useWorkspaceStore.getState().setSelection(gesture.previousSelection);
       }
       clearTransient();
@@ -215,10 +171,8 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     discardGesture(false);
 
     const svg = svgRef.current;
-    const ids =
-      gesture.kind === "pinch" ? gesture.pointerIds : [gesture.pointerId];
-    for (const id of ids)
-      if (svg?.hasPointerCapture(id)) svg.releasePointerCapture(id);
+    const ids = gesture.kind === "pinch" ? gesture.pointerIds : [gesture.pointerId];
+    for (const id of ids) if (svg?.hasPointerCapture(id)) svg.releasePointerCapture(id);
   }, [discardGesture, svgRef]);
 
   useEffect(
@@ -234,10 +188,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
           return;
         }
         const gesture = gestureRef.current;
-        const transforms =
-          gesture?.kind === "move" ||
-          gesture?.kind === "resize" ||
-          gesture?.kind === "endpoint";
+        const transforms = gesture?.kind === "move" || gesture?.kind === "resize" || gesture?.kind === "endpoint";
         if (transforms && state.elements !== previous.elements) abortGesture();
       }),
     [abortGesture],
@@ -268,28 +219,18 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     if (activeTool === "hand") return setCursor("grab");
 
     const point = worldSamples(event).at(-1);
-    setCursor(
-      point && activeTool === "selection"
-        ? cursorForDecision(decide(event, point))
-        : "default",
-    );
+    setCursor(point && activeTool === "selection" ? cursorForDecision(decide(event, point)) : "default");
   };
 
-  function startSelectionGesture(
-    event: SvgPointerEvent,
-    point: Point,
-  ): Gesture | null {
+  function startSelectionGesture(event: SvgPointerEvent, point: Point): Gesture | null {
     const store = useWorkspaceStore.getState();
     const decision = decide(event, point);
     const { pointerId } = event;
-    const byIds = (ids: readonly string[]) =>
-      store.elements.filter((element) => ids.includes(element.id));
+    const byIds = (ids: readonly string[]) => store.elements.filter((element) => ids.includes(element.id));
 
     switch (decision.action) {
       case "endpoint": {
-        const original = store.elements.find(
-          (element) => element.id === decision.elementId,
-        );
+        const original = store.elements.find((element) => element.id === decision.elementId);
         if (!original || !isLinear(original)) return null;
         return {
           kind: "endpoint",
@@ -347,19 +288,13 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     const touch = touchesRef.current.get(gesture.pointerId);
     if (!touch) return false;
     if (gesture.kind === "pan") return true;
-    return (
-      Math.hypot(touch.x - touch.startX, touch.y - touch.startY) <
-      PINCH_TAKEOVER_SLOP
-    );
+    return Math.hypot(touch.x - touch.startX, touch.y - touch.startY) < PINCH_TAKEOVER_SLOP;
   }
 
   function startPinch(svg: SVGSVGElement) {
     const entries = [...touchesRef.current.entries()];
     if (entries.length !== 2) return;
-    const [[idA, a], [idB, b]] = entries as [
-      [number, TrackedTouch],
-      [number, TrackedTouch],
-    ];
+    const [[idA, a], [idB, b]] = entries as [[number, TrackedTouch], [number, TrackedTouch]];
 
     discardGesture(true);
     for (const id of [idA, idB]) {
@@ -386,22 +321,14 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     if (gesture.kind === "pinch") {
       const [a, b] = gesture.pointerIds.map((id) => touchesRef.current.get(id));
       if (!a || !b) return;
-      const { midpoint, distance: span } = pinchMetrics(
-        event.currentTarget,
-        a,
-        b,
-      );
-      useWorkspaceStore
-        .getState()
-        .setViewport(pinchViewport(gesture.start, midpoint, span));
+      const { midpoint, distance: span } = pinchMetrics(event.currentTarget, a, b);
+      useWorkspaceStore.getState().setViewport(pinchViewport(gesture.start, midpoint, span));
       return;
     }
     if (gesture.kind === "pan") {
       const dx = event.clientX - gesture.startClient.x;
       const dy = event.clientY - gesture.startClient.y;
-      useWorkspaceStore
-        .getState()
-        .setViewport(panBy(gesture.startViewport, dx, dy));
+      useWorkspaceStore.getState().setViewport(panBy(gesture.startViewport, dx, dy));
       return;
     }
 
@@ -419,13 +346,8 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
       }
       case "marquee": {
         const box = boundsFromPoints(gesture.origin, point);
-        const inside = elementsInMarquee(
-          useWorkspaceStore.getState().elements,
-          box,
-        );
-        useWorkspaceStore
-          .getState()
-          .setSelection([...gesture.baseSelection, ...inside]);
+        const inside = elementsInMarquee(useWorkspaceStore.getState().elements, box);
+        useWorkspaceStore.getState().setSelection([...gesture.baseSelection, ...inside]);
         setMarquee(box);
         return;
       }
@@ -463,12 +385,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
 
     const current = gestureRef.current;
     if (current) {
-      if (
-        isTouch &&
-        touchesRef.current.size === 2 &&
-        canHandOverToPinch(current)
-      )
-        startPinch(svg);
+      if (isTouch && touchesRef.current.size === 2 && canHandOverToPinch(current)) startPinch(svg);
       return;
     }
     if (isTouch && touchesRef.current.size === 2) {
@@ -478,8 +395,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     if (isTouch && touchesRef.current.size > 2) return;
 
     const middleButton = event.pointerType === "mouse" && event.button === 1;
-    if (event.pointerType === "mouse" && event.button !== 0 && !middleButton)
-      return;
+    if (event.pointerType === "mouse" && event.button !== 0 && !middleButton) return;
 
     const store = useWorkspaceStore.getState();
     const { activeTool } = store;
@@ -520,11 +436,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   };
 
   const onPointerMove = (event: SvgPointerEvent) => {
-    if (
-      event.pointerType === "touch" &&
-      touchesRef.current.has(event.pointerId)
-    )
-      trackTouch(event);
+    if (event.pointerType === "touch" && touchesRef.current.has(event.pointerId)) trackTouch(event);
 
     const gesture = gestureFor(event);
     if (gesture) updateGesture(gesture, event);
@@ -532,10 +444,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
   };
 
   const onPointerLeave = () => {
-    if (!gestureRef.current)
-      setCursor(
-        useWorkspaceStore.getState().activeTool === "hand" ? "grab" : "default",
-      );
+    if (!gestureRef.current) setCursor(useWorkspaceStore.getState().activeTool === "hand" ? "grab" : "default");
   };
 
   function commitGesture(gesture: Gesture, samples: Point[]) {
@@ -544,10 +453,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
 
     switch (gesture.kind) {
       case "draw": {
-        const element = elementFromDraft(
-          updateDraft(gesture.draft, samples),
-          createId(),
-        );
+        const element = elementFromDraft(updateDraft(gesture.draft, samples), createId());
         if (element) store.addElement(element);
         return;
       }
@@ -567,10 +473,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     const gesture = gestureFor(event);
     if (!gesture) return;
 
-    const samples =
-      gesture.kind === "pan" || gesture.kind === "pinch"
-        ? []
-        : worldSamples(event);
+    const samples = gesture.kind === "pan" || gesture.kind === "pinch" ? [] : worldSamples(event);
     clearTransient();
     commitGesture(gesture, samples);
     updateHoverCursor(event);

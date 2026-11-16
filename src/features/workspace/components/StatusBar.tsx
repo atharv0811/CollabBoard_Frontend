@@ -13,17 +13,12 @@ interface StatusBarProps {
 
 export function StatusBar({ className }: StatusBarProps) {
   return (
-    <div
-      className={cn(
-        "pointer-events-none grid grid-cols-[1fr_auto_1fr] items-end gap-3",
-        className,
-      )}
-    >
+    <div className={cn("pointer-events-none grid grid-cols-[1fr_auto_1fr] items-end gap-3", className)}>
       <div className="flex items-center gap-2 justify-self-start">
         <ViewportControls />
         <HistoryControls />
       </div>
-      <div className="surface-floating pointer-events-auto flex h-9 items-center gap-2.5 px-3 text-xs text-muted-foreground">
+      <div className="pointer-events-auto flex h-9 items-center gap-2.5 surface-floating px-3 text-xs text-muted-foreground">
         <SaveStatusIndicator />
         <Divider orientation="vertical" className="h-4" />
         <span className="flex items-center gap-1.5">
@@ -32,18 +27,8 @@ export function StatusBar({ className }: StatusBarProps) {
         </span>
       </div>
 
-      <Tooltip
-        label="Help"
-        shortcut="?"
-        side="top"
-        className="pointer-events-auto justify-self-end"
-      >
-        <IconButton
-          icon={CircleQuestionMark}
-          label="Help"
-          variant="floating"
-          size="md"
-        />
+      <Tooltip label="Help" shortcut="?" side="top" className="pointer-events-auto justify-self-end">
+        <IconButton icon={CircleQuestionMark} label="Help" variant="floating" size="md" />
       </Tooltip>
     </div>
   );

@@ -75,7 +75,15 @@ describe("history stack (pure)", () => {
 
 describe("keyboard shortcuts", () => {
   const key = (patch: Partial<Parameters<typeof historyShortcut>[0]>) =>
-    historyShortcut({ key: "z", code: "KeyZ", ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...patch });
+    historyShortcut({
+      key: "z",
+      code: "KeyZ",
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      ...patch,
+    });
 
   test("Ctrl/⌘+Z undo, Ctrl/⌘+Shift+Z redo, Ctrl/⌘+Y redo", () => {
     assert.equal(key({ ctrlKey: true }), "undo");
@@ -121,7 +129,9 @@ describe("store: every document operation is one undoable step", () => {
     const original = store.getState().elements;
 
     store.getState().updateElements([translateElement(original[0]!, 30, 20), translateElement(original[1]!, 30, 20)]); // multi-move
-    store.getState().updateElements([mapElement(original[2]!, resizeMap({ x: 200, y: 0, width: 40, height: 10 }, "se", 40, 10))]);
+    store
+      .getState()
+      .updateElements([mapElement(original[2]!, resizeMap({ x: 200, y: 0, width: 40, height: 10 }, "se", 40, 10))]);
     store.getState().updateElements([{ ...line, end: p(10, 10) } as CanvasElement]);
     assert.deepEqual(depth(store), { past: 6, future: 0 }, "3 creations + 3 edits");
 

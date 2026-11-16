@@ -33,14 +33,24 @@ export default function LoginPage() {
 
         <form noValidate className="flex flex-col gap-5">
           <FormField label="Email" htmlFor="login-email">
-            <Input id="login-email" name="email" type="email" autoComplete="email" placeholder="you@company.com" icon={Mail} />
+            <Input
+              id="login-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@company.com"
+              icon={Mail}
+            />
           </FormField>
 
           <FormField
             label="Password"
             htmlFor="login-password"
             labelAside={
-              <a href={paths.forgotPassword} className="text-xs font-medium text-link underline-offset-4 hover:underline">
+              <a
+                href={paths.forgotPassword}
+                className="text-xs font-medium text-link underline-offset-4 hover:underline"
+              >
                 Forgot password?
               </a>
             }

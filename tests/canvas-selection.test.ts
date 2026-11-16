@@ -35,7 +35,12 @@ const ellipse: CanvasElement = { id: "ellipse", type: "ellipse", style, cx: 400,
 const diamond: CanvasElement = { id: "diamond", type: "diamond", style, x: 600, y: 100, width: 100, height: 60 };
 const line: CanvasElement = { id: "line", type: "line", style, start: p(100, 300), end: p(200, 350) };
 const arrow: CanvasElement = { id: "arrow", type: "arrow", style, start: p(350, 300), end: p(450, 300) };
-const freehand: CanvasElement = { id: "freehand", type: "freehand", style, points: [p(600, 300), p(650, 320), p(700, 300)] };
+const freehand: CanvasElement = {
+  id: "freehand",
+  type: "freehand",
+  style,
+  points: [p(600, 300), p(650, 320), p(700, 300)],
+};
 const ALL = [rect, ellipse, diamond, line, arrow, freehand];
 
 // ------------------------------------------------------------------ hit testing
@@ -98,7 +103,12 @@ describe("topmostElementAt", () => {
 
 describe("elementsInMarquee (containment)", () => {
   test("selects only elements fully inside", () => {
-    assert.deepEqual(elementsInMarquee(ALL, { x: 90, y: 90, width: 400, height: 280 }), ["rect", "ellipse", "line", "arrow"]);
+    assert.deepEqual(elementsInMarquee(ALL, { x: 90, y: 90, width: 400, height: 280 }), [
+      "rect",
+      "ellipse",
+      "line",
+      "arrow",
+    ]);
   });
 
   test("a partially covered element is not selected", () => {
@@ -210,7 +220,10 @@ describe("decidePointerDown", () => {
   const base = { elements: ALL, tolerance: 6, handleRadius: 8, shiftKey: false };
 
   test("clicking an element selects it and starts a move", () => {
-    assert.deepEqual(decidePointerDown({ ...base, selectedIds: [], point: p(150, 100) }), { action: "move", selectedIds: ["rect"] });
+    assert.deepEqual(decidePointerDown({ ...base, selectedIds: [], point: p(150, 100) }), {
+      action: "move",
+      selectedIds: ["rect"],
+    });
   });
 
   test("clicking a selected element keeps the whole selection", () => {
@@ -221,7 +234,10 @@ describe("decidePointerDown", () => {
   });
 
   test("clicking another element replaces the selection", () => {
-    assert.deepEqual(decidePointerDown({ ...base, selectedIds: ["ellipse"], point: p(150, 100) }), { action: "move", selectedIds: ["rect"] });
+    assert.deepEqual(decidePointerDown({ ...base, selectedIds: ["ellipse"], point: p(150, 100) }), {
+      action: "move",
+      selectedIds: ["rect"],
+    });
   });
 
   test("Shift-click adds, Shift-click on a selected element removes", () => {
@@ -229,14 +245,20 @@ describe("decidePointerDown", () => {
       action: "move",
       selectedIds: ["ellipse", "rect"],
     });
-    assert.deepEqual(decidePointerDown({ ...base, shiftKey: true, selectedIds: ["ellipse", "rect"], point: p(150, 100) }), {
-      action: "select",
-      selectedIds: ["ellipse"],
-    });
+    assert.deepEqual(
+      decidePointerDown({ ...base, shiftKey: true, selectedIds: ["ellipse", "rect"], point: p(150, 100) }),
+      {
+        action: "select",
+        selectedIds: ["ellipse"],
+      },
+    );
   });
 
   test("empty canvas starts a marquee; Shift keeps the existing selection as its base", () => {
-    assert.deepEqual(decidePointerDown({ ...base, selectedIds: [], point: p(900, 900) }), { action: "marquee", baseSelection: [] });
+    assert.deepEqual(decidePointerDown({ ...base, selectedIds: [], point: p(900, 900) }), {
+      action: "marquee",
+      baseSelection: [],
+    });
     assert.deepEqual(decidePointerDown({ ...base, shiftKey: true, selectedIds: ["rect"], point: p(900, 900) }), {
       action: "marquee",
       baseSelection: ["rect"],
@@ -244,7 +266,10 @@ describe("decidePointerDown", () => {
   });
 
   test("dragging inside the selection box (not on a stroke) moves the selection", () => {
-    assert.deepEqual(decidePointerDown({ ...base, selectedIds: ["rect"], point: p(150, 130) }), { action: "move", selectedIds: ["rect"] });
+    assert.deepEqual(decidePointerDown({ ...base, selectedIds: ["rect"], point: p(150, 130) }), {
+      action: "move",
+      selectedIds: ["rect"],
+    });
   });
 
   test("a resize handle of the selection wins over the element underneath", () => {
@@ -279,10 +304,14 @@ describe("hover cursors", () => {
   test("each resize handle shows the matching resize cursor", () => {
     // rect 100..200 × 100..160, frame padded by 6
     const expected: [ReturnType<typeof p>, string][] = [
-      [p(100 - pad, 100 - pad), "nwse-resize"], [p(200 + pad, 160 + pad), "nwse-resize"],
-      [p(200 + pad, 100 - pad), "nesw-resize"], [p(100 - pad, 160 + pad), "nesw-resize"],
-      [p(150, 100 - pad), "ns-resize"], [p(150, 160 + pad), "ns-resize"],
-      [p(200 + pad, 130), "ew-resize"], [p(100 - pad, 130), "ew-resize"],
+      [p(100 - pad, 100 - pad), "nwse-resize"],
+      [p(200 + pad, 160 + pad), "nwse-resize"],
+      [p(200 + pad, 100 - pad), "nesw-resize"],
+      [p(100 - pad, 160 + pad), "nesw-resize"],
+      [p(150, 100 - pad), "ns-resize"],
+      [p(150, 160 + pad), "ns-resize"],
+      [p(200 + pad, 130), "ew-resize"],
+      [p(100 - pad, 130), "ew-resize"],
     ];
     for (const [point, cursor] of expected) assert.equal(cursorAt(["rect"], point), cursor, JSON.stringify(point));
   });
@@ -311,7 +340,10 @@ describe("workspace store", () => {
     const store = setup();
     store.getState().setSelection(["rect", "line"]);
     assert.equal(store.getState().deleteSelected(), 2);
-    assert.deepEqual(store.getState().elements.map((e) => e.id), ["ellipse", "diamond", "arrow", "freehand"]);
+    assert.deepEqual(
+      store.getState().elements.map((e) => e.id),
+      ["ellipse", "diamond", "arrow", "freehand"],
+    );
     assert.deepEqual(store.getState().selectedIds, []);
   });
 
@@ -321,7 +353,10 @@ describe("workspace store", () => {
     store.getState().updateElements([translateElement(rect, 10, 10), translateElement(line, 1, 1)]);
     const ids = store.getState().elements.map((e) => e.id);
     assert.equal(ids.includes("rect"), false, "a deleted element is not resurrected");
-    assert.deepEqual(store.getState().elements.find((e) => e.id === "line"), translateElement(line, 1, 1));
+    assert.deepEqual(
+      store.getState().elements.find((e) => e.id === "line"),
+      translateElement(line, 1, 1),
+    );
   });
 
   test("setSelection drops unknown ids and duplicates, and skips no-op updates", () => {

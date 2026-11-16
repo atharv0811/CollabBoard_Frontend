@@ -28,10 +28,7 @@ export default function WorkspacePage() {
       />
 
       <div className="absolute top-(--workspace-gutter) left-1/2 z-(--z-overlay) hidden -translate-x-1/2 flex-col items-center gap-3 lg:flex">
-        <WorkspaceToolbar
-          activeTool={activeTool}
-          onToolChange={setActiveTool}
-        />
+        <WorkspaceToolbar activeTool={activeTool} onToolChange={setActiveTool} />
         <CanvasContextBar />
       </div>
 
@@ -43,11 +40,7 @@ export default function WorkspacePage() {
           <ViewportControls />
         </div>
         <CanvasContextBar className="pointer-events-auto" />
-        <WorkspaceToolbar
-          activeTool={activeTool}
-          onToolChange={setActiveTool}
-          className="pointer-events-auto"
-        />
+        <WorkspaceToolbar activeTool={activeTool} onToolChange={setActiveTool} className="pointer-events-auto" />
       </div>
 
       <StatusBar className="absolute inset-x-(--workspace-gutter) bottom-(--workspace-gutter) z-(--z-overlay) hidden lg:grid" />

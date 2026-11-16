@@ -135,14 +135,20 @@ describe("boards state", () => {
     const env = setup(["x", "y", "z"]);
     env.boards.getState().createBoard("Two");
     env.boards.getState().createBoard("Three");
-    assert.deepEqual(env.boards.getState().boards.map((board) => board.id), ["x", "y", "z"]);
+    assert.deepEqual(
+      env.boards.getState().boards.map((board) => board.id),
+      ["x", "y", "z"],
+    );
   });
 
   test("deleting an inactive board keeps the current one", () => {
     const env = twoBoards();
     env.boards.getState().deleteBoard(env.first);
     assert.equal(env.boards.getState().activeBoardId, env.second);
-    assert.deepEqual(env.boards.getState().boards.map((board) => board.id), [env.second]);
+    assert.deepEqual(
+      env.boards.getState().boards.map((board) => board.id),
+      [env.second],
+    );
     assert.equal(env.boards.getState().documents[env.first], undefined);
   });
 

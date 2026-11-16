@@ -105,9 +105,7 @@ function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId
           <Button type="button" variant="ghost" onClick={closeDialog}>
             Cancel
           </Button>
-          <Button type="submit">
-            {mode === "create" ? "Create board" : "Rename"}
-          </Button>
+          <Button type="submit">{mode === "create" ? "Create board" : "Rename"}</Button>
         </div>
       </form>
     </Modal>
@@ -156,6 +154,7 @@ export function BoardDialogs() {
   const dialog = useBoardsStore((state) => state.dialog);
   if (!dialog) return null;
   if (dialog.kind === "delete") return <DeleteBoardDialog key={`delete-${dialog.boardId}`} boardId={dialog.boardId} />;
-  if (dialog.kind === "rename") return <BoardNameDialog key={`rename-${dialog.boardId}`} mode="rename" boardId={dialog.boardId} />;
+  if (dialog.kind === "rename")
+    return <BoardNameDialog key={`rename-${dialog.boardId}`} mode="rename" boardId={dialog.boardId} />;
   return <BoardNameDialog key="create" mode="create" />;
 }

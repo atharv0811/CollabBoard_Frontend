@@ -14,12 +14,7 @@ export function Checkbox({ label, id, className, ...props }: CheckboxProps) {
         className,
       )}
     >
-      <input
-        id={id}
-        type="checkbox"
-        className="size-4 cursor-pointer rounded border-input accent-brand"
-        {...props}
-      />
+      <input id={id} type="checkbox" className="size-4 cursor-pointer rounded border-input accent-brand" {...props} />
       {label}
     </label>
   );

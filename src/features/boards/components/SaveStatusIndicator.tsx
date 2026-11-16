@@ -27,7 +27,7 @@ export function SaveStatusIndicator({ className, floating = false, status = "sav
       data-save-status={status}
       className={cn(
         "pointer-events-auto flex items-center gap-1.5 text-xs whitespace-nowrap",
-        floating && "surface-floating h-9 px-3",
+        floating && "h-9 surface-floating px-3",
         tone,
         className,
       )}

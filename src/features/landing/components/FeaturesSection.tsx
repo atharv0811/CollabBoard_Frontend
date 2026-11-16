@@ -32,7 +32,11 @@ const features: Feature[] = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" aria-labelledby="features-title" className="scroll-mt-16 border-t border-border py-20 sm:py-28">
+    <section
+      id="features"
+      aria-labelledby="features-title"
+      className="scroll-mt-16 border-t border-border py-20 sm:py-28"
+    >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
           id="features-title"

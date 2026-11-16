@@ -1,12 +1,7 @@
 import type { CanvasElement } from "../canvas/elements";
 import type { Bounds } from "../canvas/geometry";
 import { elementBounds } from "../canvas/hitTest";
-import {
-  padBounds,
-  SELECTION_PADDING,
-  selectionFrame,
-  visibleHandles,
-} from "../canvas/selection";
+import { padBounds, SELECTION_PADDING, selectionFrame, visibleHandles } from "../canvas/selection";
 
 interface SelectionOverlayProps {
   selected: readonly CanvasElement[];
@@ -27,16 +22,10 @@ export function SelectionOverlay({ selected, marquee, zoom }: SelectionOverlayPr
   return (
     <g pointerEvents="none">
       {frame.kind !== "none" && (
-        <g
-          data-selection=""
-          data-selected-ids={selected.map((element) => element.id).join(" ")}
-        >
+        <g data-selection="" data-selected-ids={selected.map((element) => element.id).join(" ")}>
           {selected.length > 1 &&
             selected.map((element) => {
-              const box = padBounds(
-                elementBounds(element),
-                px(SELECTION_PADDING / 2),
-              );
+              const box = padBounds(elementBounds(element), px(SELECTION_PADDING / 2));
               return (
                 <rect
                   key={element.id}

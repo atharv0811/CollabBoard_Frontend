@@ -120,5 +120,9 @@ export function gridFor(viewport: Viewport, base = BASE_GRID): { size: number; o
 
   const size = step * viewport.zoom;
   const mod = (value: number) => ((value % size) + size) % size;
-  return { size, offsetX: mod(-viewport.x * viewport.zoom - size / 2), offsetY: mod(-viewport.y * viewport.zoom - size / 2) };
+  return {
+    size,
+    offsetX: mod(-viewport.x * viewport.zoom - size / 2),
+    offsetY: mod(-viewport.y * viewport.zoom - size / 2),
+  };
 }

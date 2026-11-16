@@ -28,11 +28,7 @@ export function SidebarItem({ item, active = false, onClick }: SidebarItemProps)
           className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/item:text-foreground group-aria-[current=page]/item:text-selected-foreground"
         />
         <span className="flex-1 truncate">{item.label}</span>
-        {item.shortcut && (
-          <span className="text-[0.6875rem] text-subtle-foreground">
-            {item.shortcut}
-          </span>
-        )}
+        {item.shortcut && <span className="text-[0.6875rem] text-subtle-foreground">{item.shortcut}</span>}
         {item.count !== undefined && (
           <span className="min-w-5 rounded-full bg-secondary px-1.5 text-center text-[0.6875rem] leading-5 font-medium text-muted-foreground group-aria-[current=page]/item:bg-card group-aria-[current=page]/item:text-selected-foreground">
             {item.count}

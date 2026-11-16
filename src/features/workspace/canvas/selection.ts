@@ -15,9 +15,7 @@ export function handleHitRadius(pointerType: string): number {
 }
 
 export type SelectionFrame =
-  | { kind: "none" }
-  | { kind: "endpoints"; element: LinearElement }
-  | { kind: "box"; bounds: Bounds; frame: Bounds };
+  { kind: "none" } | { kind: "endpoints"; element: LinearElement } | { kind: "box"; bounds: Bounds; frame: Bounds };
 
 /** `zoom` keeps the padding a constant size on screen. */
 export function selectionFrame(selected: readonly CanvasElement[], zoom = 1): SelectionFrame {
@@ -83,7 +81,14 @@ export function hitHandle(frame: Bounds, point: Point, radius: number, zoom = 1)
 }
 
 export function hitEndpoint(element: LinearElement, point: Point, radius: number): EndpointId | null {
-  return nearest<EndpointId>([["start", element.start], ["end", element.end]], point, radius);
+  return nearest<EndpointId>(
+    [
+      ["start", element.start],
+      ["end", element.end],
+    ],
+    point,
+    radius,
+  );
 }
 
 export interface PointerDownInput {
@@ -136,14 +141,7 @@ export function decidePointerDown(input: PointerDownInput): PointerDownDecision 
 }
 
 export type CanvasCursor =
-  | "default"
-  | "move"
-  | "grab"
-  | "grabbing"
-  | "nwse-resize"
-  | "nesw-resize"
-  | "ns-resize"
-  | "ew-resize";
+  "default" | "move" | "grab" | "grabbing" | "nwse-resize" | "nesw-resize" | "ns-resize" | "ew-resize";
 
 const HANDLE_CURSORS: Record<HandleId, CanvasCursor> = {
   nw: "nwse-resize",

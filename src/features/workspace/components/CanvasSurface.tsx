@@ -52,21 +52,14 @@ export function CanvasSurface({ className }: CanvasSurfaceProps) {
   return (
     <main
       aria-label="Whiteboard canvas"
-      className={cn(
-        "absolute inset-0 z-(--z-canvas) touch-none overscroll-none bg-dot-grid",
-        className,
-      )}
+      className={cn("absolute inset-0 z-(--z-canvas) touch-none overscroll-none bg-dot-grid", className)}
       style={gridStyle}
     >
       <svg
         ref={measured.ref}
-        className="h-full w-full touch-none select-none text-foreground"
+        className="h-full w-full touch-none text-foreground select-none"
         style={{ cursor: shownCursor }}
-        viewBox={
-          measured.isReady
-            ? `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`
-            : undefined
-        }
+        viewBox={measured.isReady ? `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}` : undefined}
         preserveAspectRatio="xMinYMin meet"
         {...handlers}
       >
@@ -74,9 +67,7 @@ export function CanvasSurface({ className }: CanvasSurfaceProps) {
           <CanvasElementView key={element.id} element={element} />
         ))}
 
-        {previewElement && (
-          <CanvasElementView element={previewElement} preview />
-        )}
+        {previewElement && <CanvasElementView element={previewElement} preview />}
 
         <SelectionOverlay selected={selected} marquee={marquee} zoom={viewport.zoom} />
       </svg>

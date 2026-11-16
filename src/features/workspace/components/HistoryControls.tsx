@@ -25,7 +25,7 @@ export function HistoryControls({ className, tooltipSide = "top" }: HistoryContr
       aria-label="History"
       data-undo-depth={undoDepth}
       data-redo-depth={redoDepth}
-      className={cn("surface-floating pointer-events-auto flex h-9 items-center gap-0.5 px-0.5", className)}
+      className={cn("pointer-events-auto flex h-9 items-center gap-0.5 surface-floating px-0.5", className)}
     >
       <Tooltip label="Undo" shortcut={UNDO_SHORTCUT} side={tooltipSide}>
         <IconButton icon={Undo2} label="Undo" size="sm" onClick={undo} disabled={undoDepth === 0} />

@@ -37,8 +37,13 @@ describe("bounds and shapes in every drag direction", () => {
   for (const [name, [from, to]] of Object.entries(DIRECTIONS)) {
     test(`rectangle ${name}`, () => {
       assert.deepEqual(drag("rectangle", from, to), {
-        id: "id", type: "rectangle", style: { strokeWidth: 2, fill: "transparent" },
-        x: 10, y: 20, width: 100, height: 60,
+        id: "id",
+        type: "rectangle",
+        style: { strokeWidth: 2, fill: "transparent" },
+        x: 10,
+        y: 20,
+        width: 100,
+        height: 60,
       });
     });
 
@@ -94,7 +99,10 @@ describe("arrowhead orientation", () => {
 
       const cross = (w: P) => (w.x - end.x) * dir.y - (w.y - end.y) * dir.x;
       assert.ok(cross(wingA) * cross(wingB) < 0, "wings are on opposite sides of the shaft");
-      assert.ok(Math.abs(Math.hypot(wingA.x - end.x, wingA.y - end.y) - Math.hypot(wingB.x - end.x, wingB.y - end.y)) < 1e-9, "symmetric");
+      assert.ok(
+        Math.abs(Math.hypot(wingA.x - end.x, wingA.y - end.y) - Math.hypot(wingB.x - end.x, wingB.y - end.y)) < 1e-9,
+        "symmetric",
+      );
     });
   }
 

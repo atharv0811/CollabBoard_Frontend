@@ -13,10 +13,7 @@ import {
 export type ActionResult = { ok: true } | { ok: false; reason: string };
 
 export type BoardDialog =
-  | { kind: "create" }
-  | { kind: "rename"; boardId: string }
-  | { kind: "delete"; boardId: string }
-  | null;
+  { kind: "create" } | { kind: "rename"; boardId: string } | { kind: "delete"; boardId: string } | null;
 
 export interface BoardsState {
   boards: BoardMeta[];

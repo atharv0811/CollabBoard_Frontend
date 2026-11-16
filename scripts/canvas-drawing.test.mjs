@@ -51,7 +51,14 @@ async function launchBrowser() {
   const profile = mkdtempSync(join(tmpdir(), "collabboard-test-"));
   const proc = spawn(
     chromePath,
-    ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--no-first-run", "--disable-gpu", "about:blank"],
+    [
+      "--headless=new",
+      `--remote-debugging-port=${port}`,
+      `--user-data-dir=${profile}`,
+      "--no-first-run",
+      "--disable-gpu",
+      "about:blank",
+    ],
     { stdio: "ignore" },
   );
 
@@ -121,7 +128,12 @@ function createPage(browser, { url, mode }) {
 
   /** Set the viewport size — also used to simulate a window resize / device rotation. */
   async function resize(width, height) {
-    await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: touch ? 2 : 1, mobile: touch });
+    await send("Emulation.setDeviceMetricsOverride", {
+      width,
+      height,
+      deviceScaleFactor: touch ? 2 : 1,
+      mobile: touch,
+    });
     await sleep(400);
   }
 
@@ -138,7 +150,9 @@ function createPage(browser, { url, mode }) {
     for (let attempt = 0; attempt < 80; attempt++) {
       if (await evaluate(`!!document.querySelector('${CANVAS}')`)) {
         // Remember the last pointerId that went down on the canvas (for the lost-capture test).
-        await evaluate(`document.querySelector('${CANVAS}').addEventListener('pointerdown', (e) => { window.__lastPointerId = e.pointerId; }, true)`);
+        await evaluate(
+          `document.querySelector('${CANVAS}').addEventListener('pointerdown', (e) => { window.__lastPointerId = e.pointerId; }, true)`,
+        );
         return;
       }
       await sleep(250);
@@ -200,7 +214,9 @@ function createPage(browser, { url, mode }) {
     await sleep(400);
     const center = await toolCenter(label);
     await tap(center.x, center.y);
-    return evaluate(`[...document.querySelectorAll('button[aria-label="${label}"]')].some((b) => b.offsetParent && b.getAttribute('aria-pressed') === 'true')`);
+    return evaluate(
+      `[...document.querySelectorAll('button[aria-label="${label}"]')].some((b) => b.offsetParent && b.getAttribute('aria-pressed') === 'true')`,
+    );
   }
 
   async function shapes() {
@@ -250,11 +266,34 @@ function createPage(browser, { url, mode }) {
   async function mouseClickDrag(from, to, button, { shift = false } = {}) {
     const buttons = { left: 1, right: 2, middle: 4 }[button];
     const modifiers = shift ? 8 : 0;
-    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: from.x, y: from.y, button, buttons, clickCount: 1, modifiers });
+    await send("Input.dispatchMouseEvent", {
+      type: "mousePressed",
+      x: from.x,
+      y: from.y,
+      button,
+      buttons,
+      clickCount: 1,
+      modifiers,
+    });
     for (let step = 1; step <= 6; step++) {
-      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + ((to.x - from.x) * step) / 6, y: from.y + ((to.y - from.y) * step) / 6, button, buttons, modifiers });
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x: from.x + ((to.x - from.x) * step) / 6,
+        y: from.y + ((to.y - from.y) * step) / 6,
+        button,
+        buttons,
+        modifiers,
+      });
     }
-    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: to.x, y: to.y, button, buttons: 0, clickCount: 1, modifiers });
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseReleased",
+      x: to.x,
+      y: to.y,
+      button,
+      buttons: 0,
+      clickCount: 1,
+      modifiers,
+    });
     await sleep(120);
   }
 
@@ -293,8 +332,24 @@ function createPage(browser, { url, mode }) {
       return;
     }
     const modifiers = shift ? 8 : 0;
-    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1, modifiers });
-    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1, modifiers });
+    await send("Input.dispatchMouseEvent", {
+      type: "mousePressed",
+      x: point.x,
+      y: point.y,
+      button: "left",
+      buttons: 1,
+      clickCount: 1,
+      modifiers,
+    });
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseReleased",
+      x: point.x,
+      y: point.y,
+      button: "left",
+      buttons: 0,
+      clickCount: 1,
+      modifiers,
+    });
     await sleep(120);
   }
 
@@ -312,7 +367,12 @@ function createPage(browser, { url, mode }) {
   /** Wheel event at `point` (mouse wheel by default; ctrl simulates trackpad pinch). */
   async function wheel(point, { deltaX = 0, deltaY = 0, ctrl = false } = {}) {
     await send("Input.dispatchMouseEvent", {
-      type: "mouseWheel", x: point.x, y: point.y, deltaX, deltaY, modifiers: ctrl ? 2 : 0,
+      type: "mouseWheel",
+      x: point.x,
+      y: point.y,
+      deltaX,
+      deltaY,
+      modifiers: ctrl ? 2 : 0,
     });
     await sleep(80);
   }
@@ -352,8 +412,12 @@ function createPage(browser, { url, mode }) {
     const modifiers = (meta ? 4 : 2) | (shift ? 8 : 0);
     for (const type of ["keyDown", "keyUp"]) {
       await send("Input.dispatchKeyEvent", {
-        type, modifiers, key: shift ? upper : letter, code: `Key${upper}`,
-        windowsVirtualKeyCode: upper.charCodeAt(0), nativeVirtualKeyCode: upper.charCodeAt(0),
+        type,
+        modifiers,
+        key: shift ? upper : letter,
+        code: `Key${upper}`,
+        windowsVirtualKeyCode: upper.charCodeAt(0),
+        nativeVirtualKeyCode: upper.charCodeAt(0),
       });
     }
     await sleep(80);
@@ -424,17 +488,52 @@ function createPage(browser, { url, mode }) {
   async function key(name) {
     const codes = { Delete: 46, Backspace: 8, Escape: 27 };
     for (const type of ["keyDown", "keyUp"]) {
-      await send("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: codes[name], nativeVirtualKeyCode: codes[name] });
+      await send("Input.dispatchKeyEvent", {
+        type,
+        key: name,
+        code: name,
+        windowsVirtualKeyCode: codes[name],
+        nativeVirtualKeyCode: codes[name],
+      });
     }
     await sleep(100);
   }
 
   return {
-    open, drag, selectTool, shapes, elements, geometry, resize, touchEvent, toolCenter,
-    dropPointerCapture, mouseClickDrag, pointerDown, pointerMove, pointerUp, touch,
-    selection, click, key, evaluate, hover, canvasCursor,
-    wheel, press, view, screenBoxes, send, modKey, history,
-    boardList, openMenu, closeMenu, pressText, type, createBoard,
+    open,
+    drag,
+    selectTool,
+    shapes,
+    elements,
+    geometry,
+    resize,
+    touchEvent,
+    toolCenter,
+    dropPointerCapture,
+    mouseClickDrag,
+    pointerDown,
+    pointerMove,
+    pointerUp,
+    touch,
+    selection,
+    click,
+    key,
+    evaluate,
+    hover,
+    canvasCursor,
+    wheel,
+    press,
+    view,
+    screenBoxes,
+    send,
+    modKey,
+    history,
+    boardList,
+    openMenu,
+    closeMenu,
+    pressText,
+    type,
+    createBoard,
   };
 }
 
@@ -442,9 +541,24 @@ function createPage(browser, { url, mode }) {
 
 /** One element of each type at fixed spots, with a point on each stroke. */
 function layout(mode) {
-  const cells = mode === "desktop"
-    ? [[300, 200, 420, 290], [480, 200, 600, 290], [660, 200, 780, 290], [300, 420, 420, 500], [480, 420, 600, 500], [660, 420, 780, 500]]
-    : [[40, 110, 160, 190], [220, 110, 340, 190], [40, 250, 160, 330], [220, 250, 340, 330], [40, 390, 160, 470], [220, 390, 340, 470]];
+  const cells =
+    mode === "desktop"
+      ? [
+          [300, 200, 420, 290],
+          [480, 200, 600, 290],
+          [660, 200, 780, 290],
+          [300, 420, 420, 500],
+          [480, 420, 600, 500],
+          [660, 420, 780, 500],
+        ]
+      : [
+          [40, 110, 160, 190],
+          [220, 110, 340, 190],
+          [40, 250, 160, 330],
+          [220, 250, 340, 330],
+          [40, 390, 160, 470],
+          [220, 390, 340, 470],
+        ];
   return DRAWING_TOOLS.map(({ type, label }, index) => {
     const [x0, y0, x1, y1] = cells[index];
     const cx = (x0 + x1) / 2;
@@ -477,8 +591,10 @@ function shifted(value, dx, dy) {
     return Object.fromEntries(
       Object.entries(value).map(([key, v]) => [
         key,
-        typeof v === "number" && (key === "x" || key === "cx") ? v + dx
-          : typeof v === "number" && (key === "y" || key === "cy") ? v + dy
+        typeof v === "number" && (key === "x" || key === "cx")
+          ? v + dx
+          : typeof v === "number" && (key === "y" || key === "cy")
+            ? v + dy
             : shifted(v, dx, dy),
       ]),
     );
@@ -527,22 +643,58 @@ function expectScreenBox(fail, label, rect, from, to) {
 function areas(mode) {
   return mode === "desktop"
     ? [
-        [{ x: 420, y: 200 }, { x: 600, y: 320 }],
-        [{ x: 700, y: 250 }, { x: 900, y: 420 }],
-        [{ x: 500, y: 480 }, { x: 760, y: 640 }],
+        [
+          { x: 420, y: 200 },
+          { x: 600, y: 320 },
+        ],
+        [
+          { x: 700, y: 250 },
+          { x: 900, y: 420 },
+        ],
+        [
+          { x: 500, y: 480 },
+          { x: 760, y: 640 },
+        ],
       ]
     : [
-        [{ x: 60, y: 120 }, { x: 180, y: 220 }],
-        [{ x: 220, y: 300 }, { x: 330, y: 420 }],
-        [{ x: 80, y: 470 }, { x: 200, y: 590 }],
+        [
+          { x: 60, y: 120 },
+          { x: 180, y: 220 },
+        ],
+        [
+          { x: 220, y: 300 },
+          { x: 330, y: 420 },
+        ],
+        [
+          { x: 80, y: 470 },
+          { x: 200, y: 590 },
+        ],
       ];
 }
 
 /** A drag near the left and the right edge of the canvas (clear of floating UI). */
 function edgeDrags(mode) {
   return mode === "desktop"
-    ? [[{ x: 300, y: 300 }, { x: 360, y: 400 }], [{ x: 1290, y: 300 }, { x: 1362, y: 420 }]]
-    : [[{ x: 3, y: 120 }, { x: 70, y: 200 }], [{ x: 320, y: 250 }, { x: 387, y: 330 }]];
+    ? [
+        [
+          { x: 300, y: 300 },
+          { x: 360, y: 400 },
+        ],
+        [
+          { x: 1290, y: 300 },
+          { x: 1362, y: 420 },
+        ],
+      ]
+    : [
+        [
+          { x: 3, y: 120 },
+          { x: 70, y: 200 },
+        ],
+        [
+          { x: 320, y: 250 },
+          { x: 387, y: 330 },
+        ],
+      ];
 }
 
 /** Viewport after a resize / rotation. */
@@ -607,8 +759,14 @@ function defineTests(page, mode) {
     {
       name: "F: a square drag renders as a square, a rectangle keeps its proportions",
       async run(expect, fail) {
-        const square = [{ x: 100, y: 150 }, { x: 200, y: 250 }];
-        const wide = [{ x: 100, y: 300 }, { x: 260, y: 360 }];
+        const square = [
+          { x: 100, y: 150 },
+          { x: 200, y: 250 },
+        ];
+        const wide = [
+          { x: 100, y: 300 },
+          { x: 260, y: 360 },
+        ];
         await page.drag(...square);
         await page.drag(...wide);
         const { rects, viewBox, svgSize } = await page.geometry();
@@ -630,7 +788,10 @@ function defineTests(page, mode) {
     {
       name: `H: ${target.label} — shapes keep world + screen position, new drags stay accurate`,
       async run(expect, fail) {
-        const first = [{ x: 100, y: 150 }, { x: 200, y: 250 }];
+        const first = [
+          { x: 100, y: 150 },
+          { x: 200, y: 250 },
+        ];
         await page.drag(...first);
         const initial = (await page.geometry()).rects[0];
 
@@ -644,7 +805,10 @@ function defineTests(page, mode) {
           near(fail, `screen ${key} after resize`, resized.rects[0].screen[key], initial.screen[key]);
         }
 
-        const after = [{ x: 300, y: 120 }, { x: 420, y: 200 }];
+        const after = [
+          { x: 300, y: 120 },
+          { x: 420, y: 200 },
+        ];
         await page.drag(...after);
         expectScreenBox(fail, "drag after resize", (await page.geometry()).rects[1], ...after);
       },
@@ -668,7 +832,10 @@ function defineTests(page, mode) {
       async run(expect, fail) {
         expect({ toolActive: await page.selectTool("Draw") }, { toolActive: true });
         const origin = mode === "desktop" ? { x: 400, y: 250 } : { x: 40, y: 150 };
-        const zigzag = Array.from({ length: 10 }, (_, i) => ({ x: origin.x + (i + 1) * 25, y: origin.y + ((i + 1) % 2) * 40 }));
+        const zigzag = Array.from({ length: 10 }, (_, i) => ({
+          x: origin.x + (i + 1) * 25,
+          y: origin.y + ((i + 1) % 2) * 40,
+        }));
         await page.pointerDown(origin.x, origin.y);
         for (const point of zigzag) {
           await sleep(16);
@@ -835,7 +1002,8 @@ function defineTests(page, mode) {
         const [dx, dy] = [30, 25];
         for (const item of items) await page.drag(item.hit, { x: item.hit.x + dx, y: item.hit.y + dy });
         const after = await page.elements();
-        for (const item of items) nearDeep(fail, item.type, byId(after, item.id), shifted(byId(before, item.id), dx, dy));
+        for (const item of items)
+          nearDeep(fail, item.type, byId(after, item.id), shifted(byId(before, item.id), dx, dy));
         expect(await page.shapes(), { committed: 6, preview: 0 }); // moving never draws
       },
     },
@@ -865,7 +1033,12 @@ function defineTests(page, mode) {
         const after = await page.elements();
         for (const item of items) {
           const moved = item.id === a1.id || item.id === a2.id;
-          nearDeep(fail, item.type, byId(after, item.id), moved ? shifted(byId(before, item.id), dx, dy) : byId(before, item.id));
+          nearDeep(
+            fail,
+            item.type,
+            byId(after, item.id),
+            moved ? shifted(byId(before, item.id), dx, dy) : byId(before, item.id),
+          );
         }
       },
     },
@@ -876,7 +1049,10 @@ function defineTests(page, mode) {
         const items = await drawAll(page, mode);
         const last = items[5];
         await page.click(items[0].hit);
-        const around = (box) => [{ x: box[0] - 10, y: box[1] - 10 }, { x: box[2] + 10, y: box[3] + 10 }];
+        const around = (box) => [
+          { x: box[0] - 10, y: box[1] - 10 },
+          { x: box[2] + 10, y: box[3] + 10 },
+        ];
         const [from, to] = around(last.box);
         await page.mouseClickDrag(from, to, "left", { shift: true });
         expect({ ids: (await page.selection()).ids.join() }, { ids: [items[0].id, last.id].join() });
@@ -927,7 +1103,16 @@ function defineTests(page, mode) {
         for (const label of ["Line", "Arrow"]) {
           await page.open();
           await page.selectTool(label);
-          const [from, to] = mode === "desktop" ? [{ x: 450, y: 300 }, { x: 650, y: 400 }] : [{ x: 80, y: 220 }, { x: 260, y: 360 }];
+          const [from, to] =
+            mode === "desktop"
+              ? [
+                  { x: 450, y: 300 },
+                  { x: 650, y: 400 },
+                ]
+              : [
+                  { x: 80, y: 220 },
+                  { x: 260, y: 360 },
+                ];
           await page.drag(from, to);
           await page.selectTool("Select");
           await page.click({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 });
@@ -954,7 +1139,16 @@ function defineTests(page, mode) {
       name: "S9: freehand resizes proportionally through its box",
       async run(expect, fail) {
         await page.selectTool("Draw");
-        const [from, to] = mode === "desktop" ? [{ x: 450, y: 300 }, { x: 650, y: 400 }] : [{ x: 80, y: 220 }, { x: 260, y: 360 }];
+        const [from, to] =
+          mode === "desktop"
+            ? [
+                { x: 450, y: 300 },
+                { x: 650, y: 400 },
+              ]
+            : [
+                { x: 80, y: 220 },
+                { x: 260, y: 360 },
+              ];
         await page.drag(from, to);
         await page.selectTool("Select");
         await page.click({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 });
@@ -964,7 +1158,12 @@ function defineTests(page, mode) {
         await page.drag(se, { x: se.x + 60, y: se.y + 40 });
         const after = (await page.elements())[0];
         expect({ pointCount: after.pointCount }, { pointCount: before.pointCount });
-        nearDeep(fail, "bbox", after.bbox, { x: before.bbox.x, y: before.bbox.y, width: before.bbox.width + 60, height: before.bbox.height + 40 });
+        nearDeep(fail, "bbox", after.bbox, {
+          x: before.bbox.x,
+          y: before.bbox.y,
+          width: before.bbox.width + 60,
+          height: before.bbox.height + 40,
+        });
       },
     },
     {
@@ -987,7 +1186,9 @@ function defineTests(page, mode) {
 
         // 2. Tool switched mid-move (e.g. by a shortcut): the move is abandoned.
         await page.drag(hit, { x: hit.x + 40, y: hit.y + 40 }, { release: false });
-        await page.evaluate(`[...document.querySelectorAll('button[aria-label="Ellipse"]')].find((b) => b.offsetParent).click()`);
+        await page.evaluate(
+          `[...document.querySelectorAll('button[aria-label="Ellipse"]')].find((b) => b.offsetParent).click()`,
+        );
         await sleep(60);
         await page.pointerMove(hit.x + 60, hit.y + 60);
         await page.pointerUp(hit.x + 60, hit.y + 60);
@@ -1045,7 +1246,10 @@ function defineTests(page, mode) {
         const items = await drawAll(page, mode);
         await page.click(items[0].hit);
         await page.key("Delete");
-        expect({ count: (await page.elements()).length, selected: (await page.selection()).ids.length }, { count: 5, selected: 0 });
+        expect(
+          { count: (await page.elements()).length, selected: (await page.selection()).ids.length },
+          { count: 5, selected: 0 },
+        );
 
         // Multiple: marquee around the last two cells, then Backspace.
         const [c4, c5] = [items[4], items[5]];
@@ -1056,21 +1260,32 @@ function defineTests(page, mode) {
         expect({ selectedBeforeBackspace: (await page.selection()).ids.length }, { selectedBeforeBackspace: 2 });
         await page.key("Backspace");
         const remaining = (await page.elements()).map((el) => el.id);
-        if (!sameList(remaining, [items[1].id, items[2].id, items[3].id])) fail(`remaining ${JSON.stringify(remaining)}`);
+        if (!sameList(remaining, [items[1].id, items[2].id, items[3].id]))
+          fail(`remaining ${JSON.stringify(remaining)}`);
 
         // The Delete action in the UI.
         await page.click(items[1].hit);
-        await page.evaluate(`[...document.querySelectorAll('button[aria-label^="Delete"]')].find((b) => b.offsetParent).click()`);
+        await page.evaluate(
+          `[...document.querySelectorAll('button[aria-label^="Delete"]')].find((b) => b.offsetParent).click()`,
+        );
         await sleep(100);
-        expect({ afterButton: (await page.elements()).length, selected: (await page.selection()).ids.length }, { afterButton: 2, selected: 0 });
+        expect(
+          { afterButton: (await page.elements()).length, selected: (await page.selection()).ids.length },
+          { afterButton: 2, selected: 0 },
+        );
 
         // Typing in an input must not delete.
         await page.click(items[2].hit);
-        await page.evaluate(`(() => { const i = document.createElement('input'); i.id = 'test-input'; i.value = 'abc'; document.body.append(i); i.focus(); })()`);
+        await page.evaluate(
+          `(() => { const i = document.createElement('input'); i.id = 'test-input'; i.value = 'abc'; document.body.append(i); i.focus(); })()`,
+        );
         await page.key("Backspace");
         await page.key("Delete");
         expect({ whileTyping: (await page.elements()).length }, { whileTyping: 2 });
-        expect({ inputStillWorks: await page.evaluate(`document.getElementById('test-input').value`) }, { inputStillWorks: "ab" });
+        expect(
+          { inputStillWorks: await page.evaluate(`document.getElementById('test-input').value`) },
+          { inputStillWorks: "ab" },
+        );
         await page.evaluate(`document.getElementById('test-input').remove()`);
         await page.key("Delete");
         expect({ afterBlur: (await page.elements()).length }, { afterBlur: 1 });
@@ -1087,8 +1302,14 @@ function defineTests(page, mode) {
         await page.click({ x: x0 + 50, y: y0 });
 
         const expectedByHandle = {
-          nw: "nwse-resize", se: "nwse-resize", ne: "nesw-resize", sw: "nesw-resize",
-          n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize",
+          nw: "nwse-resize",
+          se: "nwse-resize",
+          ne: "nesw-resize",
+          sw: "nesw-resize",
+          n: "ns-resize",
+          s: "ns-resize",
+          e: "ew-resize",
+          w: "ew-resize",
         };
         const { handles } = await page.selection();
         for (const [handle, cursor] of Object.entries(expectedByHandle)) {
@@ -1112,7 +1333,10 @@ function defineTests(page, mode) {
         await page.selectTool("Select");
         await page.click({ x: 375, y: 550 });
         const { endpoints } = await page.selection();
-        expect({ start: await page.hover(endpoints.start), end: await page.hover(endpoints.end) }, { start: "grab", end: "grab" });
+        expect(
+          { start: await page.hover(endpoints.start), end: await page.hover(endpoints.end) },
+          { start: "grab", end: "grab" },
+        );
         expect({ lineBody: await page.hover({ x: 340, y: 527 }) }, { lineBody: "move" });
       },
     },
@@ -1168,7 +1392,12 @@ function defineTests(page, mode) {
         const k = v0.viewBox.width / v1.viewBox.width;
         if (!(k > 1.05)) fail(`wheel up should zoom in, ratio ${k}`);
         if (!(v1.percent > 100)) fail(`zoom % ${v1.percent}`);
-        nearBox(fail, "zoomed around the pointer", (await page.screenBoxes()).elements[0], scaledBox(before, anchor, k));
+        nearBox(
+          fail,
+          "zoomed around the pointer",
+          (await page.screenBoxes()).elements[0],
+          scaledBox(before, anchor, k),
+        );
 
         before = (await page.screenBoxes()).elements[0];
         await page.wheel(anchor, { deltaY: 100 });
@@ -1176,7 +1405,12 @@ function defineTests(page, mode) {
         v1 = await page.view();
         const kOut = v0.viewBox.width / v1.viewBox.width;
         if (!(kOut < 0.95)) fail(`wheel down should zoom out, ratio ${kOut}`);
-        nearBox(fail, "zoomed out around the pointer", (await page.screenBoxes()).elements[0], scaledBox(before, anchor, kOut));
+        nearBox(
+          fail,
+          "zoomed out around the pointer",
+          (await page.screenBoxes()).elements[0],
+          scaledBox(before, anchor, kOut),
+        );
 
         v0 = await page.view();
         await page.wheel(anchor, { deltaY: -10, ctrl: true });
@@ -1213,7 +1447,8 @@ function defineTests(page, mode) {
         await page.selectTool("Hand (pan)");
         await page.drag(...spots.panAway);
         const away = (await page.screenBoxes()).elements[0];
-        if (!(away.x + away.w < 0 || away.y + away.h < 0)) fail(`content should be off-screen before fit: ${JSON.stringify(away)}`);
+        if (!(away.x + away.w < 0 || away.y + away.h < 0))
+          fail(`content should be off-screen before fit: ${JSON.stringify(away)}`);
 
         await page.press("Fit content");
         const { size, percent: fitPercent } = await page.view();
@@ -1244,7 +1479,13 @@ function defineTests(page, mode) {
         await page.drag(...spots.rect);
         let box = (await page.screenBoxes()).elements[0];
         nearBox(fail, "drawn", box, boxOf(...spots.rect));
-        near(fail, "stored in world units", (await page.elements())[0].width, (spots.rect[1].x - spots.rect[0].x) / zoom, 0.6);
+        near(
+          fail,
+          "stored in world units",
+          (await page.elements())[0].width,
+          (spots.rect[1].x - spots.rect[0].x) / zoom,
+          0.6,
+        );
 
         await page.selectTool("Select");
         const grab = { x: spots.rect[0].x + (spots.rect[1].x - spots.rect[0].x) / 4, y: spots.rect[0].y };
@@ -1285,7 +1526,17 @@ function defineTests(page, mode) {
         const v0 = await page.view();
 
         const mid = { x: 200, y: 540 };
-        await pinch(page, [{ x: 150, y: 540 }, { x: 250, y: 540 }], [{ x: 100, y: 540 }, { x: 300, y: 540 }]);
+        await pinch(
+          page,
+          [
+            { x: 150, y: 540 },
+            { x: 250, y: 540 },
+          ],
+          [
+            { x: 100, y: 540 },
+            { x: 300, y: 540 },
+          ],
+        );
         const k = v0.viewBox.width / (await page.view()).viewBox.width;
         near(fail, "pinch ratio", k, 2, 0.02);
         nearBox(fail, "zoomed around the midpoint", (await page.screenBoxes()).elements[0], scaledBox(before, mid, k));
@@ -1293,7 +1544,17 @@ function defineTests(page, mode) {
 
         before = (await page.screenBoxes()).elements[0];
         const v1 = await page.view();
-        await pinch(page, [{ x: 100, y: 540 }, { x: 300, y: 540 }], [{ x: 140, y: 570 }, { x: 340, y: 570 }]);
+        await pinch(
+          page,
+          [
+            { x: 100, y: 540 },
+            { x: 300, y: 540 },
+          ],
+          [
+            { x: 140, y: 570 },
+            { x: 340, y: 570 },
+          ],
+        );
         near(fail, "two-finger pan keeps zoom", (await page.view()).viewBox.width, v1.viewBox.width, 0.01);
         nearBox(fail, "two-finger pan", (await page.screenBoxes()).elements[0], shiftedBox(before, 40, 30));
         expect(await page.shapes(), { committed: 1, preview: 0 });
@@ -1309,12 +1570,29 @@ function defineTests(page, mode) {
 
         await page.selectTool("Select");
         const onStroke = { x: spots.rect[0].x + 30, y: spots.rect[0].y };
-        await pinch(page, [onStroke, { x: onStroke.x + 120, y: onStroke.y + 200 }], [{ x: onStroke.x - 20, y: onStroke.y - 20 }, { x: onStroke.x + 150, y: onStroke.y + 240 }]);
+        await pinch(
+          page,
+          [onStroke, { x: onStroke.x + 120, y: onStroke.y + 200 }],
+          [
+            { x: onStroke.x - 20, y: onStroke.y - 20 },
+            { x: onStroke.x + 150, y: onStroke.y + 240 },
+          ],
+        );
         expect({ selected: (await page.selection()).ids.length }, { selected: 0 });
         nearDeep(fail, "shape not moved", (await page.elements())[0], world);
 
         await page.selectTool("Ellipse");
-        await pinch(page, [{ x: 120, y: 520 }, { x: 260, y: 560 }], [{ x: 90, y: 500 }, { x: 300, y: 600 }]);
+        await pinch(
+          page,
+          [
+            { x: 120, y: 520 },
+            { x: 260, y: 560 },
+          ],
+          [
+            { x: 90, y: 500 },
+            { x: 300, y: 600 },
+          ],
+        );
         expect(await page.shapes(), { committed: 1, preview: 0 });
       },
     },
@@ -1410,14 +1688,19 @@ function defineTests(page, mode) {
           { x: Math.max(c4.box[2], c5.box[2]) + 30, y: Math.max(c4.box[3], c5.box[3]) + 30 },
         );
         expect({ selected: (await page.selection()).ids.length }, { selected: 2 });
-        await page.evaluate(`[...document.querySelectorAll('button[aria-label^="Delete"]')].find((b) => b.offsetParent).click()`);
+        await page.evaluate(
+          `[...document.querySelectorAll('button[aria-label^="Delete"]')].find((b) => b.offsetParent).click()`,
+        );
         await sleep(100);
         expect({ count: (await page.elements()).length }, { count: 4 });
         const before = await page.history();
         await undo(page, mode);
         nearDeep(fail, "multi delete undone with original ordering", await page.elements(), full);
         await redo(page, mode);
-        expect({ count: (await page.elements()).length, undo: (await page.history()).undo }, { count: 4, undo: before.undo });
+        expect(
+          { count: (await page.elements()).length, undo: (await page.history()).undo },
+          { count: 4, undo: before.undo },
+        );
       },
     },
     {
@@ -1592,7 +1875,9 @@ function defineTests(page, mode) {
         await page.modKey("z", { meta: true, shift: true });
         expect({ afterCmdShiftZ: (await page.elements()).length }, { afterCmdShiftZ: 2 }); // nothing to redo
 
-        await page.evaluate(`(() => { const i = document.createElement('input'); i.id = 'test-input'; document.body.append(i); i.focus(); })()`);
+        await page.evaluate(
+          `(() => { const i = document.createElement('input'); i.id = 'test-input'; document.body.append(i); i.focus(); })()`,
+        );
         await page.modKey("z");
         expect({ whileTyping: (await page.elements()).length }, { whileTyping: 2 });
         await page.evaluate(`document.getElementById('test-input').remove()`);
@@ -1648,7 +1933,10 @@ function defineTests(page, mode) {
       name: "P1: first launch opens an empty 'Untitled board'",
       async run(expect) {
         const boards = await page.boardList();
-        expect({ count: boards.length, name: boards[0]?.name, active: boards[0]?.active }, { count: 1, name: "Untitled board", active: true });
+        expect(
+          { count: boards.length, name: boards[0]?.name, active: boards[0]?.active },
+          { count: 1, name: "Untitled board", active: true },
+        );
         expect({ elements: (await page.elements()).length }, { elements: 0 });
       },
     },
@@ -1665,7 +1953,10 @@ function defineTests(page, mode) {
         await page.type("Product roadmap");
         await page.pressText("Rename");
         await sleep(200);
-        expect({ dialogClosed: await page.evaluate(`!document.querySelector('dialog[open]')`) }, { dialogClosed: true });
+        expect(
+          { dialogClosed: await page.evaluate(`!document.querySelector('dialog[open]')`) },
+          { dialogClosed: true },
+        );
 
         await page.createBoard("Second");
         const second = (await page.boardList()).find((b) => b.name === "Second");
@@ -1676,9 +1967,15 @@ function defineTests(page, mode) {
         if (!/already exists/.test(dupError)) fail(`duplicate error: "${dupError}"`);
         await page.pressText("Cancel");
 
-        const names = (await page.boardList()).map((b) => b.name).sort().join();
+        const names = (await page.boardList())
+          .map((b) => b.name)
+          .sort()
+          .join();
         expect({ names }, { names: "Product roadmap,Second" });
-        expect({ header: await page.evaluate(`document.querySelector('[data-active-board-name]').textContent`) }, { header: "Second" });
+        expect(
+          { header: await page.evaluate(`document.querySelector('[data-active-board-name]').textContent`) },
+          { header: "Second" },
+        );
       },
     },
     {
@@ -1692,7 +1989,10 @@ function defineTests(page, mode) {
         const onFirst = await page.elements();
 
         await page.createBoard("Board B");
-        expect({ emptyB: (await page.elements()).length, selected: (await page.selection()).ids.length }, { emptyB: 0, selected: 0 });
+        expect(
+          { emptyB: (await page.elements()).length, selected: (await page.selection()).ids.length },
+          { emptyB: 0, selected: 0 },
+        );
         expect(await page.history(), { undo: 0, redo: 0 });
         await page.closeMenu();
         await page.selectTool("Ellipse");
@@ -1703,7 +2003,10 @@ function defineTests(page, mode) {
         await page.click(await rowCenter(page, boards.find((b) => b.name === "Untitled board").id));
         await sleep(300);
         nearDeep(fail, "first board", await page.elements(), onFirst);
-        expect({ selected: (await page.selection()).ids.length, undo: (await page.history()).undo }, { selected: 0, undo: 0 });
+        expect(
+          { selected: (await page.selection()).ids.length, undo: (await page.history()).undo },
+          { selected: 0, undo: 0 },
+        );
 
         await page.click(await rowCenter(page, boards.find((b) => b.name === "Board B").id));
         await sleep(300);
@@ -1752,7 +2055,16 @@ function defineTests(page, mode) {
         await page.pressText("Delete board");
         await sleep(200);
         let boards = await page.boardList();
-        expect({ names: boards.map((b) => b.name).sort().join(), active: boards.find((b) => b.active)?.name }, { names: "Delete me,Untitled board", active: "Delete me" });
+        expect(
+          {
+            names: boards
+              .map((b) => b.name)
+              .sort()
+              .join(),
+            active: boards.find((b) => b.active)?.name,
+          },
+          { names: "Delete me,Untitled board", active: "Delete me" },
+        );
 
         // Active board → moves to the remaining one, with its content.
         await page.openMenu();
@@ -1760,7 +2072,10 @@ function defineTests(page, mode) {
         await page.pressText("Delete board");
         await sleep(300);
         boards = await page.boardList();
-        expect({ names: boards.map((b) => b.name).join(), active: boards[0]?.active }, { names: "Untitled board", active: true });
+        expect(
+          { names: boards.map((b) => b.name).join(), active: boards[0]?.active },
+          { names: "Untitled board", active: true },
+        );
         expect({ elementsBack: (await page.elements()).length }, { elementsBack: 1 });
 
         // Last board → a new empty default board replaces it.
@@ -1861,25 +2176,59 @@ async function redo(page, mode) {
 function navSpots(mode) {
   return mode === "desktop"
     ? {
-        rect: [{ x: 500, y: 300 }, { x: 650, y: 400 }],
-        rect2: [{ x: 300, y: 500 }, { x: 420, y: 600 }],
-        line: [{ x: 420, y: 480 }, { x: 640, y: 600 }],
+        rect: [
+          { x: 500, y: 300 },
+          { x: 650, y: 400 },
+        ],
+        rect2: [
+          { x: 300, y: 500 },
+          { x: 420, y: 600 },
+        ],
+        line: [
+          { x: 420, y: 480 },
+          { x: 640, y: 600 },
+        ],
         empty: { x: 900, y: 550 },
-        panAway: [{ x: 900, y: 550 }, { x: 100, y: 120 }],
+        panAway: [
+          { x: 900, y: 550 },
+          { x: 100, y: 120 },
+        ],
       }
     : {
-        rect: [{ x: 100, y: 200 }, { x: 220, y: 300 }],
-        rect2: [{ x: 60, y: 380 }, { x: 180, y: 460 }],
-        line: [{ x: 80, y: 340 }, { x: 260, y: 440 }],
+        rect: [
+          { x: 100, y: 200 },
+          { x: 220, y: 300 },
+        ],
+        rect2: [
+          { x: 60, y: 380 },
+          { x: 180, y: 460 },
+        ],
+        line: [
+          { x: 80, y: 340 },
+          { x: 260, y: 440 },
+        ],
         empty: { x: 250, y: 450 },
-        panAway: [{ x: 300, y: 560 }, { x: 40, y: 130 }],
+        panAway: [
+          { x: 300, y: 560 },
+          { x: 40, y: 130 },
+        ],
       };
 }
 
-const boxOf = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) });
+const boxOf = (a, b) => ({
+  x: Math.min(a.x, b.x),
+  y: Math.min(a.y, b.y),
+  w: Math.abs(b.x - a.x),
+  h: Math.abs(b.y - a.y),
+});
 const shiftedBox = (box, dx, dy) => ({ ...box, x: box.x + dx, y: box.y + dy });
 /** A box scaled by `k` around screen point `m` (what zooming about m does to it). */
-const scaledBox = (box, m, k) => ({ x: m.x + (box.x - m.x) * k, y: m.y + (box.y - m.y) * k, w: box.w * k, h: box.h * k });
+const scaledBox = (box, m, k) => ({
+  x: m.x + (box.x - m.x) * k,
+  y: m.y + (box.y - m.y) * k,
+  w: box.w * k,
+  h: box.h * k,
+});
 const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 function nearBox(fail, label, actual, expected, tolerance = 1.5) {
@@ -1896,7 +2245,10 @@ async function pinch(page, from, to) {
   const steps = 6;
   for (let s = 1; s <= steps; s++) {
     await sleep(16);
-    const at = (i) => ({ x: from[i].x + ((to[i].x - from[i].x) * s) / steps, y: from[i].y + ((to[i].y - from[i].y) * s) / steps });
+    const at = (i) => ({
+      x: from[i].x + ((to[i].x - from[i].x) * s) / steps,
+      y: from[i].y + ((to[i].y - from[i].y) * s) / steps,
+    });
     await page.touchEvent("touchMove", [finger(0, at(0)), finger(1, at(1))]);
   }
   await sleep(16);
@@ -1918,14 +2270,37 @@ const DIRECTION_NAMES = ["↘", "↙", "↖", "↗"];
 
 /** Four boxes, each dragged from a different corner (↘ ↙ ↖ ↗). */
 function fourDirections(mode) {
-  const boxes = mode === "desktop"
-    ? [[350, 200, 550, 320], [750, 200, 950, 320], [350, 450, 550, 570], [750, 450, 950, 570]]
-    : [[30, 100, 150, 200], [220, 100, 340, 200], [30, 330, 150, 430], [220, 330, 340, 430]];
+  const boxes =
+    mode === "desktop"
+      ? [
+          [350, 200, 550, 320],
+          [750, 200, 950, 320],
+          [350, 450, 550, 570],
+          [750, 450, 950, 570],
+        ]
+      : [
+          [30, 100, 150, 200],
+          [220, 100, 340, 200],
+          [30, 330, 150, 430],
+          [220, 330, 340, 430],
+        ];
   const corners = [
-    ([x0, y0, x1, y1]) => [{ x: x0, y: y0 }, { x: x1, y: y1 }],
-    ([x0, y0, x1, y1]) => [{ x: x1, y: y0 }, { x: x0, y: y1 }],
-    ([x0, y0, x1, y1]) => [{ x: x1, y: y1 }, { x: x0, y: y0 }],
-    ([x0, y0, x1, y1]) => [{ x: x0, y: y1 }, { x: x1, y: y0 }],
+    ([x0, y0, x1, y1]) => [
+      { x: x0, y: y0 },
+      { x: x1, y: y1 },
+    ],
+    ([x0, y0, x1, y1]) => [
+      { x: x1, y: y0 },
+      { x: x0, y: y1 },
+    ],
+    ([x0, y0, x1, y1]) => [
+      { x: x1, y: y1 },
+      { x: x0, y: y0 },
+    ],
+    ([x0, y0, x1, y1]) => [
+      { x: x0, y: y1 },
+      { x: x1, y: y0 },
+    ],
   ];
   return boxes.map((box, index) => corners[index](box));
 }
@@ -1958,11 +2333,15 @@ function checkElement(fail, label, el, type, from, to) {
       break;
     case "diamond": {
       const expected = [
-        { x: x + width / 2, y }, { x: x + width, y: y + height / 2 },
-        { x: x + width / 2, y: y + height }, { x, y: y + height / 2 },
+        { x: x + width / 2, y },
+        { x: x + width, y: y + height / 2 },
+        { x: x + width / 2, y: y + height },
+        { x, y: y + height / 2 },
       ];
       if (el.vertices.length !== 4) return fail(`${label}: expected 4 vertices`);
-      el.vertices.forEach((vertex, index) => nearPoint(["top", "right", "bottom", "left"][index], vertex, expected[index]));
+      el.vertices.forEach((vertex, index) =>
+        nearPoint(["top", "right", "bottom", "left"][index], vertex, expected[index]),
+      );
       break;
     }
     case "line":
@@ -2038,7 +2417,9 @@ const port = server.httpServer.address().port;
 const lan = lanAddress();
 
 const suites = [
-  ...(lan ? [{ label: "android-like: touch, insecure LAN origin", url: `http://${lan}:${port}/board`, mode: "touch" }] : []),
+  ...(lan
+    ? [{ label: "android-like: touch, insecure LAN origin", url: `http://${lan}:${port}/board`, mode: "touch" }]
+    : []),
   { label: "localhost: touch, secure origin", url: `http://localhost:${port}/board`, mode: "touch" },
   { label: "desktop: mouse", url: `http://localhost:${port}/board`, mode: "desktop" },
 ];

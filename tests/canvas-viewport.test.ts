@@ -56,7 +56,12 @@ describe("canvas ↔ world conversion", () => {
   }
 
   test("viewBox covers exactly the visible world", () => {
-    assert.deepEqual(viewBoxFor({ x: 10, y: 20, zoom: 2 }, { width: 800, height: 600 }), { x: 10, y: 20, width: 400, height: 300 });
+    assert.deepEqual(viewBoxFor({ x: 10, y: 20, zoom: 2 }, { width: 800, height: 600 }), {
+      x: 10,
+      y: 20,
+      width: 400,
+      height: 300,
+    });
   });
 });
 
@@ -219,13 +224,29 @@ describe("dot grid", () => {
 });
 
 describe("selection hit areas stay screen-sized at any zoom", () => {
-  const rect: CanvasElement = { id: "r", type: "rectangle", style: DEFAULT_STYLE, x: 100, y: 100, width: 100, height: 60 };
+  const rect: CanvasElement = {
+    id: "r",
+    type: "rectangle",
+    style: DEFAULT_STYLE,
+    x: 100,
+    y: 100,
+    width: 100,
+    height: 60,
+  };
 
   test("at 200% the se handle sits padding/zoom outside the corner and is hit with radius/zoom", () => {
     const zoom = 2;
     const corner = p(200 + SELECTION_PADDING / zoom, 160 + SELECTION_PADDING / zoom);
     const decide = (point: { x: number; y: number }) =>
-      decidePointerDown({ elements: [rect], selectedIds: ["r"], point, shiftKey: false, tolerance: 6 / zoom, handleRadius: 8 / zoom, zoom });
+      decidePointerDown({
+        elements: [rect],
+        selectedIds: ["r"],
+        point,
+        shiftKey: false,
+        tolerance: 6 / zoom,
+        handleRadius: 8 / zoom,
+        zoom,
+      });
     assert.deepEqual(decide(corner), { action: "resize", handle: "se", selectedIds: ["r"] });
     // 5 world units away = 10 screen px > 8 px radius → no longer the handle
     assert.notEqual(decide(p(corner.x + 5, corner.y + 5)).action, "resize");
@@ -233,7 +254,15 @@ describe("selection hit areas stay screen-sized at any zoom", () => {
 });
 
 describe("store navigation never mutates element data", () => {
-  const rect: CanvasElement = { id: "r", type: "rectangle", style: DEFAULT_STYLE, x: 100, y: 100, width: 100, height: 60 };
+  const rect: CanvasElement = {
+    id: "r",
+    type: "rectangle",
+    style: DEFAULT_STYLE,
+    x: 100,
+    y: 100,
+    width: 100,
+    height: 60,
+  };
 
   test("pan, zoom, reset and fit leave elements untouched", () => {
     const store = createWorkspaceStore();

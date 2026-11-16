@@ -1,0 +1,7 @@
+dist
+dist-ssr
+node_modules
+coverage
+bun.lock
+*.local
+.env

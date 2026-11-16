@@ -6,11 +6,7 @@ interface DividerProps {
   className?: string;
 }
 
-export function Divider({
-  orientation = "horizontal",
-  label,
-  className,
-}: DividerProps) {
+export function Divider({ orientation = "horizontal", label, className }: DividerProps) {
   if (orientation === "vertical") {
     return (
       <span
@@ -23,10 +19,7 @@ export function Divider({
 
   if (label) {
     return (
-      <div
-        role="separator"
-        className={cn("flex items-center gap-3", className)}
-      >
+      <div role="separator" className={cn("flex items-center gap-3", className)}>
         <span className="h-px flex-1 bg-border" />
         <span className="text-xs text-muted-foreground">{label}</span>
         <span className="h-px flex-1 bg-border" />

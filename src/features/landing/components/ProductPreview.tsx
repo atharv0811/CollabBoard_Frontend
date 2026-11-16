@@ -4,16 +4,13 @@ import { CollaboratorCursor } from "@/components/common/CollaboratorCursor";
 import { BoardSketch } from "@/components/illustrations/BoardSketch";
 import { cn } from "@/lib/utils";
 import { sampleCollaborators } from "@/features/workspace/data/collaborators";
-import {
-  PREVIEW_ACTIVE_TOOL,
-  toolGroups,
-} from "@/features/workspace/data/tools";
+import { PREVIEW_ACTIVE_TOOL, toolGroups } from "@/features/workspace/data/tools";
 
 const previewTools = toolGroups.flat();
 
 function MiniToolbar() {
   return (
-    <div className="surface-floating flex items-center gap-0.5 rounded-[10px] p-0.5 sm:p-1">
+    <div className="flex items-center gap-0.5 surface-floating rounded-[10px] p-0.5 sm:p-1">
       {previewTools.map((tool, index) => {
         const Icon = tool.icon;
         const active = tool.id === PREVIEW_ACTIVE_TOOL;
@@ -65,7 +62,7 @@ export function ProductPreview({ className }: { className?: string }) {
             aria-hidden="true"
             className="absolute inset-x-2 top-2 flex items-start justify-between gap-2 sm:inset-x-3 sm:top-3"
           >
-            <span className="surface-floating inline-flex size-7 items-center justify-center rounded-[10px] text-foreground sm:size-9">
+            <span className="inline-flex size-7 items-center justify-center surface-floating rounded-[10px] text-foreground sm:size-9">
               <Menu className="size-4" strokeWidth={1.75} />
             </span>
             <MiniToolbar />
@@ -79,23 +76,12 @@ export function ProductPreview({ className }: { className?: string }) {
             <span className="w-7 sm:hidden" />
           </div>
 
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-[4%] top-[20%] bottom-[6%] flex items-center"
-          >
+          <div aria-hidden="true" className="absolute inset-x-[4%] top-[20%] bottom-[6%] flex items-center">
             <BoardSketch idPrefix="hero-sketch" className="max-h-full" />
           </div>
 
-          <CollaboratorCursor
-            name="Priya"
-            tone="amber"
-            className="top-[34%] left-[62%]"
-          />
-          <CollaboratorCursor
-            name="Marco"
-            tone="sky"
-            className="top-[84%] left-[58%]"
-          />
+          <CollaboratorCursor name="Priya" tone="amber" className="top-[34%] left-[62%]" />
+          <CollaboratorCursor name="Marco" tone="sky" className="top-[84%] left-[58%]" />
         </div>
       </div>
     </div>

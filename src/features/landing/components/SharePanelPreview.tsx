@@ -38,18 +38,11 @@ export function SharePanelPreview() {
       aria-label="Example share dialog showing a board link and three people with different access levels"
       className="relative"
     >
-      <div
-        aria-hidden="true"
-        className="rounded-panel border border-border bg-popover p-5 shadow-popover sm:p-6"
-      >
+      <div aria-hidden="true" className="rounded-panel border border-border bg-popover p-5 shadow-popover sm:p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-foreground">
-              Share “Product roadmap”
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Invite people or copy a link
-            </p>
+            <p className="text-sm font-semibold text-foreground">Share “Product roadmap”</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Invite people or copy a link</p>
           </div>
           <Badge variant="success">
             <span className="size-1.5 rounded-full bg-success" />
@@ -59,9 +52,7 @@ export function SharePanelPreview() {
 
         <div className="mt-5 flex items-center gap-2 rounded-lg border border-input bg-card py-1.5 pr-1.5 pl-3">
           <Link2 className="size-4 shrink-0 text-muted-foreground" />
-          <span className="flex-1 truncate text-sm text-foreground/80">
-            collabboard.app/b/product-roadmap
-          </span>
+          <span className="flex-1 truncate text-sm text-foreground/80">collabboard.app/b/product-roadmap</span>
           <span className="inline-flex h-7 items-center gap-1.5 rounded-md bg-secondary px-2.5 text-xs font-medium text-foreground">
             <Copy className="size-3.5" />
             Copy
@@ -76,16 +67,10 @@ export function SharePanelPreview() {
             <li key={member.email} className="flex items-center gap-3 py-2">
               <Avatar name={member.name} tone={member.tone} size="md" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-foreground">
-                  {member.name}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {member.email}
-                </span>
+                <span className="block truncate text-sm font-medium text-foreground">{member.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
               </span>
-              <Badge variant={member.role === "Owner" ? "brand" : "outline"}>
-                {member.role}
-              </Badge>
+              <Badge variant={member.role === "Owner" ? "brand" : "outline"}>{member.role}</Badge>
             </li>
           ))}
         </ul>
@@ -96,11 +81,7 @@ export function SharePanelPreview() {
         </div>
       </div>
 
-      <CollaboratorCursor
-        name="Priya"
-        tone="amber"
-        className="-top-4 right-10 hidden sm:flex"
-      />
+      <CollaboratorCursor name="Priya" tone="amber" className="-top-4 right-10 hidden sm:flex" />
     </div>
   );
 }

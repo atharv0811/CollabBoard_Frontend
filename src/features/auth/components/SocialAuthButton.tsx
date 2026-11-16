@@ -12,10 +12,7 @@ function GoogleIcon() {
         fill="#34A853"
         d="M12 24c3.24 0 5.96-1.07 7.94-2.9l-3.88-3.02c-1.07.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.1A12 12 0 0 0 12 24Z"
       />
-      <path
-        fill="#FBBC05"
-        d="M5.29 14.28a7.2 7.2 0 0 1 0-4.56v-3.1H1.28a12 12 0 0 0 0 10.76l4.01-3.1Z"
-      />
+      <path fill="#FBBC05" d="M5.29 14.28a7.2 7.2 0 0 1 0-4.56v-3.1H1.28a12 12 0 0 0 0 10.76l4.01-3.1Z" />
       <path
         fill="#EA4335"
         d="M12 4.77c1.76 0 3.34.6 4.59 1.8l3.44-3.44A11.5 11.5 0 0 0 12 0 12 12 0 0 0 1.28 6.62l4.01 3.1C6.23 6.88 8.88 4.77 12 4.77Z"
@@ -30,13 +27,7 @@ interface SocialAuthButtonProps {
 
 export function SocialAuthButton({ label }: SocialAuthButtonProps) {
   return (
-    <button
-      type="button"
-      className={cn(
-        buttonVariants({ variant: "outline", size: "lg" }),
-        "w-full",
-      )}
-    >
+    <button type="button" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}>
       <GoogleIcon />
       {label}
     </button>

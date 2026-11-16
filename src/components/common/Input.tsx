@@ -7,12 +7,7 @@ interface InputProps extends ComponentProps<"input"> {
   trailing?: ReactNode;
 }
 
-export function Input({
-  icon: Icon,
-  trailing,
-  className,
-  ...props
-}: InputProps) {
+export function Input({ icon: Icon, trailing, className, ...props }: InputProps) {
   return (
     <div className="group/input relative flex items-center">
       {Icon && (
@@ -32,9 +27,7 @@ export function Input({
         )}
         {...props}
       />
-      {trailing && (
-        <div className="absolute right-1.5 flex items-center">{trailing}</div>
-      )}
+      {trailing && <div className="absolute right-1.5 flex items-center">{trailing}</div>}
     </div>
   );
 }

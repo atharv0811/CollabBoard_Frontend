@@ -9,10 +9,7 @@ interface WorkspaceMenuProps {
   className?: string;
 }
 
-export function WorkspaceMenu({
-  defaultOpen = false,
-  className,
-}: WorkspaceMenuProps) {
+export function WorkspaceMenu({ defaultOpen = false, className }: WorkspaceMenuProps) {
   const [open, setOpen] = useState(defaultOpen);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -42,10 +39,7 @@ export function WorkspaceMenu({
   }, [open]);
 
   return (
-    <div
-      ref={containerRef}
-      className={cn("flex flex-col items-start gap-2", className)}
-    >
+    <div ref={containerRef} className={cn("flex flex-col items-start gap-2", className)}>
       <IconButton
         ref={buttonRef}
         icon={open ? X : Menu}

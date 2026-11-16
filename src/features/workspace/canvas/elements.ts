@@ -57,12 +57,7 @@ export interface FreehandElement extends ElementBase {
 }
 
 export type CanvasElement =
-  | RectangleElement
-  | EllipseElement
-  | DiamondElement
-  | LineElement
-  | ArrowElement
-  | FreehandElement;
+  RectangleElement | EllipseElement | DiamondElement | LineElement | ArrowElement | FreehandElement;
 
 export type ElementType = CanvasElement["type"];
 

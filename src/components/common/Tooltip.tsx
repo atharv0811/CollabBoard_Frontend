@@ -19,13 +19,7 @@ const sideClass: Record<TooltipSide, string> = {
   right: "left-full top-1/2 ml-2 -translate-y-1/2",
 };
 
-export function Tooltip({
-  label,
-  shortcut,
-  side = "bottom",
-  children,
-  className,
-}: TooltipProps) {
+export function Tooltip({ label, shortcut, side = "bottom", children, className }: TooltipProps) {
   return (
     <span className={cn("group/tooltip relative inline-flex", className)}>
       {children}
@@ -38,9 +32,7 @@ export function Tooltip({
         )}
       >
         {label}
-        {shortcut && (
-          <Kbd className="h-4 min-w-4 px-1 text-[0.625rem]">{shortcut}</Kbd>
-        )}
+        {shortcut && <Kbd className="h-4 min-w-4 px-1 text-[0.625rem]">{shortcut}</Kbd>}
       </span>
     </span>
   );

@@ -19,10 +19,7 @@ export function CanvasContextBar({ className }: CanvasContextBarProps) {
     <div
       role="toolbar"
       aria-label="Selection actions"
-      className={cn(
-        "surface-floating flex h-9 items-center gap-1 pr-1 pl-3 text-xs",
-        className,
-      )}
+      className={cn("flex h-9 items-center gap-1 surface-floating pr-1 pl-3 text-xs", className)}
     >
       <span className="text-muted-foreground" aria-live="polite">
         {count} selected
@@ -36,9 +33,7 @@ export function CanvasContextBar({ className }: CanvasContextBarProps) {
       >
         <Trash aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
         Delete
-        <Kbd className="hidden h-4 min-w-4 px-1 text-[0.625rem] sm:inline-flex">
-          Del
-        </Kbd>
+        <Kbd className="hidden h-4 min-w-4 px-1 text-[0.625rem] sm:inline-flex">Del</Kbd>
       </button>
     </div>
   );

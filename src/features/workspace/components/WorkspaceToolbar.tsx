@@ -13,17 +13,13 @@ interface WorkspaceToolbarProps {
   onToolChange: (toolId: ToolId) => void;
 }
 
-export function WorkspaceToolbar({
-  className,
-  activeTool,
-  onToolChange,
-}: WorkspaceToolbarProps) {
+export function WorkspaceToolbar({ className, activeTool, onToolChange }: WorkspaceToolbarProps) {
   return (
     <div
       role="toolbar"
       aria-label="Drawing tools"
       className={cn(
-        "surface-floating flex max-w-full items-center gap-0.5 overflow-x-auto p-1 scrollbar-none sm:overflow-visible",
+        "flex max-w-full scrollbar-none items-center gap-0.5 overflow-x-auto surface-floating p-1 sm:overflow-visible",
         className,
       )}
     >
@@ -31,12 +27,7 @@ export function WorkspaceToolbar({
         <Fragment key={group[0]?.id ?? index}>
           {index > 0 && <Divider orientation="vertical" />}
           {group.map((tool) => (
-            <ToolButton
-              key={tool.id}
-              tool={tool}
-              active={tool.id === activeTool}
-              onClick={onToolChange}
-            />
+            <ToolButton key={tool.id} tool={tool} active={tool.id === activeTool} onClick={onToolChange} />
           ))}
         </Fragment>
       ))}

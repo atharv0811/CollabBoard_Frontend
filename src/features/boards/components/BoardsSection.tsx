@@ -34,7 +34,11 @@ export function BoardsSection() {
         {boards.map((board) => {
           const active = board.id === activeBoardId;
           return (
-            <li key={board.id} data-board-id={board.id} className="group/row flex items-center gap-0.5 rounded-tool pr-1 hover:bg-accent/60">
+            <li
+              key={board.id}
+              data-board-id={board.id}
+              className="group/row flex items-center gap-0.5 rounded-tool pr-1 hover:bg-accent/60"
+            >
               <button
                 type="button"
                 aria-current={active ? "page" : undefined}

@@ -15,22 +15,22 @@ function ThemeToggle() {
 
   return (
     <div role="group" aria-label="Theme" className="flex shrink-0 items-center gap-0.5 rounded-lg bg-secondary p-0.5">
-        {themeOptions.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            aria-label={label}
-            title={label}
-            aria-pressed={id === theme}
-            onClick={() => setTheme(id)}
-            className={cn(
-              "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150",
-              "hover:text-foreground aria-pressed:bg-card aria-pressed:text-selected-foreground aria-pressed:shadow-xs",
-            )}
-          >
-            <Icon aria-hidden="true" className="size-3.5" strokeWidth={2} />
-          </button>
-        ))}
+      {themeOptions.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          type="button"
+          aria-label={label}
+          title={label}
+          aria-pressed={id === theme}
+          onClick={() => setTheme(id)}
+          className={cn(
+            "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150",
+            "hover:text-foreground aria-pressed:bg-card aria-pressed:text-selected-foreground aria-pressed:shadow-xs",
+          )}
+        >
+          <Icon aria-hidden="true" className="size-3.5" strokeWidth={2} />
+        </button>
+      ))}
     </div>
   );
 }

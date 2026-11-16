@@ -32,7 +32,14 @@ export default function RegisterPage() {
 
         <form noValidate className="flex flex-col gap-5">
           <FormField label="Full name" htmlFor="register-name">
-            <Input id="register-name" name="name" type="text" autoComplete="name" placeholder="Alex Morgan" icon={User} />
+            <Input
+              id="register-name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              placeholder="Alex Morgan"
+              icon={User}
+            />
           </FormField>
 
           <FormField label="Email" htmlFor="register-email">

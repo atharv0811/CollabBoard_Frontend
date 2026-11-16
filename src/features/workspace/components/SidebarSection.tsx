@@ -8,15 +8,8 @@ interface SidebarSectionProps {
   onItemClick?: (id: string) => void;
 }
 
-export function SidebarSection({
-  title,
-  items,
-  activeId,
-  onItemClick,
-}: SidebarSectionProps) {
-  const headingId = title
-    ? `sidebar-${title.toLowerCase().replace(/\s+/g, "-")}`
-    : undefined;
+export function SidebarSection({ title, items, activeId, onItemClick }: SidebarSectionProps) {
+  const headingId = title ? `sidebar-${title.toLowerCase().replace(/\s+/g, "-")}` : undefined;
 
   return (
     <section aria-labelledby={headingId} className="px-1.5">

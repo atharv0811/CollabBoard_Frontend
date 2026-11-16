@@ -25,22 +25,18 @@ export function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
       id="workspace-menu"
       aria-label="Board menu"
       className={cn(
-        "surface-floating flex w-(--sidebar-width) max-w-[calc(100vw-2rem)] flex-col overflow-hidden shadow-popover",
+        "flex w-(--sidebar-width) max-w-[calc(100vw-2rem)] flex-col overflow-hidden surface-floating shadow-popover",
         className,
       )}
     >
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <Logo size="sm" />
-        <span
-          data-active-board-name=""
-          title={boardName}
-          className="truncate text-xs text-muted-foreground"
-        >
+        <span data-active-board-name="" title={boardName} className="truncate text-xs text-muted-foreground">
           {boardName}
         </span>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto py-1.5 scrollbar-thin">
+      <div className="flex min-h-0 flex-1 scrollbar-thin flex-col gap-2 overflow-y-auto py-1.5">
         <SidebarSection items={mainActions} onItemClick={onAction} />
         <div className="mx-4 h-px bg-border" />
         <BoardsSection />

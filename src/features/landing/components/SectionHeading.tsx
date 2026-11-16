@@ -16,9 +16,7 @@ export function SectionHeading({ eyebrow, title, description, align = "center", 
       <h2 id={id} className="mt-2 text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl">
         {title}
       </h2>
-      {description && (
-        <p className="mt-4 text-base leading-relaxed text-pretty text-muted-foreground">{description}</p>
-      )}
+      {description && <p className="mt-4 text-base leading-relaxed text-pretty text-muted-foreground">{description}</p>}
     </div>
   );
 }

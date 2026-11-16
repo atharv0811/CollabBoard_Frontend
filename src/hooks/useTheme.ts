@@ -16,8 +16,7 @@ function readStoredTheme(): ThemePreference {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isThemePreference(stored)) return stored;
-  } catch {
-  }
+  } catch {}
   return DEFAULT_THEME;
 }
 
@@ -32,8 +31,7 @@ export function setTheme(theme: ThemePreference) {
   currentTheme = theme;
   try {
     localStorage.setItem(STORAGE_KEY, theme);
-  } catch {
-  }
+  } catch {}
   applyTheme();
   listeners.forEach((listener) => listener());
 }

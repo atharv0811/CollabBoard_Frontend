@@ -26,9 +26,7 @@ export function useCanvasViewport<T extends Element = HTMLElement>(): CanvasView
     if (!element) return;
 
     const update = (next: CanvasViewportSize) => {
-      setSize((previous) =>
-        previous.width === next.width && previous.height === next.height ? previous : next,
-      );
+      setSize((previous) => (previous.width === next.width && previous.height === next.height ? previous : next));
     };
 
     update(readSize(element));

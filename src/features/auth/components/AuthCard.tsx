@@ -7,28 +7,15 @@ interface AuthCardProps {
   footer?: ReactNode;
 }
 
-export function AuthCard({
-  title,
-  description,
-  children,
-  footer,
-}: AuthCardProps) {
+export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
-          {title}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {description}
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">{title}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
       {children}
-      {footer && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          {footer}
-        </p>
-      )}
+      {footer && <p className="mt-8 text-center text-sm text-muted-foreground">{footer}</p>}
     </div>
   );
 }

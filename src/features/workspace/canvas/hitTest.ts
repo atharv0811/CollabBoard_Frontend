@@ -1,11 +1,5 @@
 import type { CanvasElement, Point } from "./elements.ts";
-import {
-  arrowheadPoints,
-  boundsFromPoints,
-  boundsOfPoints,
-  diamondVertices,
-  type Bounds,
-} from "./geometry.ts";
+import { arrowheadPoints, boundsFromPoints, boundsOfPoints, diamondVertices, type Bounds } from "./geometry.ts";
 
 export function hitTolerance(pointerType: string): number {
   return pointerType === "mouse" ? 6 : 12;

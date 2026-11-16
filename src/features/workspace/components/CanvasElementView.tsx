@@ -1,21 +1,13 @@
 import { memo } from "react";
 import type { CanvasElement } from "../canvas/elements";
-import {
-  arrowheadPoints,
-  diamondVertices,
-  freehandPathData,
-  toSvgPoints,
-} from "../canvas/geometry";
+import { arrowheadPoints, diamondVertices, freehandPathData, toSvgPoints } from "../canvas/geometry";
 
 interface CanvasElementViewProps {
   element: CanvasElement;
   preview?: boolean;
 }
 
-export const CanvasElementView = memo(function CanvasElementView({
-  element,
-  preview = false,
-}: CanvasElementViewProps) {
+export const CanvasElementView = memo(function CanvasElementView({ element, preview = false }: CanvasElementViewProps) {
   const common = {
     ...(preview ? { "data-preview": "" } : { "data-shape-id": element.id }),
     "data-element-type": element.type,
@@ -51,55 +43,25 @@ export const CanvasElementView = memo(function CanvasElementView({
       );
 
     case "diamond":
-      return (
-        <polygon
-          {...common}
-          points={toSvgPoints(diamondVertices(element))}
-          fill={element.style.fill}
-        />
-      );
+      return <polygon {...common} points={toSvgPoints(diamondVertices(element))} fill={element.style.fill} />;
 
     case "line":
-      return (
-        <line
-          {...common}
-          x1={element.start.x}
-          y1={element.start.y}
-          x2={element.end.x}
-          y2={element.end.y}
-        />
-      );
+      return <line {...common} x1={element.start.x} y1={element.start.y} x2={element.end.x} y2={element.end.y} />;
 
     case "arrow":
       return (
         <g {...common} fill="none">
-          <line
-            x1={element.start.x}
-            y1={element.start.y}
-            x2={element.end.x}
-            y2={element.end.y}
-          />
+          <line x1={element.start.x} y1={element.start.y} x2={element.end.x} y2={element.end.y} />
           <polyline
             data-arrowhead=""
-            points={toSvgPoints(
-              arrowheadPoints(
-                element.start,
-                element.end,
-                element.style.strokeWidth,
-              ),
-            )}
+            points={toSvgPoints(arrowheadPoints(element.start, element.end, element.style.strokeWidth))}
           />
         </g>
       );
 
     case "freehand":
       return (
-        <path
-          {...common}
-          d={freehandPathData(element.points)}
-          fill="none"
-          data-point-count={element.points.length}
-        />
+        <path {...common} d={freehandPathData(element.points)} fill="none" data-point-count={element.points.length} />
       );
   }
 });

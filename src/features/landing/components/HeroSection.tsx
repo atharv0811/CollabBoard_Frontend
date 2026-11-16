@@ -44,8 +44,8 @@ export function HeroSection() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
-            CollabBoard is a calm, hand-drawn style whiteboard where your team sketches, plans and decides — in the
-            same space, at the same time.
+            CollabBoard is a calm, hand-drawn style whiteboard where your team sketches, plans and decides — in the same
+            space, at the same time.
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">

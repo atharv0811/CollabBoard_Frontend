@@ -49,7 +49,13 @@ function axisScale(anchor: number, originalMoving: number, delta: number, minSiz
   return { anchor, scale: span / originalSpan };
 }
 
-export function resizeMap(bounds: Bounds, handle: HandleId, dx: number, dy: number, minSize = MIN_RESIZE_SIZE): PointMap {
+export function resizeMap(
+  bounds: Bounds,
+  handle: HandleId,
+  dx: number,
+  dy: number,
+  minSize = MIN_RESIZE_SIZE,
+): PointMap {
   const left = bounds.x;
   const right = bounds.x + bounds.width;
   const top = bounds.y;

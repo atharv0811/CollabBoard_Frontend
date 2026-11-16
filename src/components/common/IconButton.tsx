@@ -4,15 +4,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const iconButtonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center rounded-tool text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground aria-pressed:bg-selected aria-pressed:text-selected-foreground disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex shrink-0 items-center justify-center rounded-tool text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-pressed:bg-selected aria-pressed:text-selected-foreground",
   {
     variants: {
       variant: {
         ghost: "",
-        outline:
-          "border border-border bg-card shadow-xs hover:border-border-strong",
-        floating:
-          "surface-floating rounded-[10px] text-foreground hover:bg-accent",
+        outline: "border border-border bg-card shadow-xs hover:border-border-strong",
+        floating: "surface-floating rounded-[10px] text-foreground hover:bg-accent",
       },
       size: {
         sm: "size-8 [&_svg]:size-4",
@@ -24,22 +22,12 @@ const iconButtonVariants = cva(
   },
 );
 
-interface IconButtonProps
-  extends
-    Omit<ComponentProps<"button">, "children">,
-    VariantProps<typeof iconButtonVariants> {
+interface IconButtonProps extends Omit<ComponentProps<"button">, "children">, VariantProps<typeof iconButtonVariants> {
   icon: LucideIcon;
   label: string;
 }
 
-export function IconButton({
-  icon: Icon,
-  label,
-  variant,
-  size,
-  className,
-  ...props
-}: IconButtonProps) {
+export function IconButton({ icon: Icon, label, variant, size, className, ...props }: IconButtonProps) {
   return (
     <button
       type="button"

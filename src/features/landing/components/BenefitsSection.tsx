@@ -52,7 +52,10 @@ export function BenefitsSection() {
         </div>
 
         <div className="relative">
-          <div aria-hidden="true" className="absolute -inset-6 rounded-[1.75rem] bg-dot-grid mask-fade-y sm:-inset-10" />
+          <div
+            aria-hidden="true"
+            className="absolute -inset-6 rounded-[1.75rem] bg-dot-grid mask-fade-y sm:-inset-10"
+          />
           <div className="relative mx-auto max-w-md">
             <SharePanelPreview />
           </div>
