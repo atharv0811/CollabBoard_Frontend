@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { toolGroups } from "../data/tools";
 import { historyShortcut } from "../store/history";
 import { useWorkspaceStore } from "../store/workspaceStore";
 
@@ -23,6 +24,16 @@ export function useWorkspaceShortcuts() {
       }
 
       if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      // event.code ("KeyR") is the physical key, so shortcuts also work with non-English keyboard layouts.
+      const letter = event.code.startsWith("Key") ? event.code.slice(3) : event.key.toUpperCase();
+      const tool = toolGroups.flat().find((t) => t.shortcut === letter);
+      if (tool && !event.shiftKey) {
+        event.preventDefault();
+        store.setActiveTool(tool.id);
+        return;
+      }
+
       if (store.selectedIds.length === 0) return;
 
       if (event.key === "Delete" || event.key === "Backspace") {
