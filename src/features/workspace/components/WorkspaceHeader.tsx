@@ -3,14 +3,18 @@ import { Avatar, AvatarStack } from "@/components/common/Avatar";
 import { Divider } from "@/components/common/Divider";
 import { Tooltip } from "@/components/common/Tooltip";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/features/auth/components/UserMenu";
+import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
-import { sampleCollaborators, sampleUser } from "../data/collaborators";
+import { sampleCollaborators } from "../data/collaborators";
 
 interface WorkspaceHeaderProps {
   className?: string;
 }
 
 export function WorkspaceHeader({ className }: WorkspaceHeaderProps) {
+  const user = useCurrentUser();
+
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div className="hidden h-11 items-center gap-2 surface-floating px-2 xl:flex">
@@ -41,13 +45,9 @@ export function WorkspaceHeader({ className }: WorkspaceHeaderProps) {
         <span className="sr-only sm:hidden">Share board</span>
       </Button>
 
-      <button
-        type="button"
-        aria-label={`Account: ${sampleUser.name}`}
-        className="inline-flex size-11 items-center justify-center surface-floating transition-colors duration-150 hover:bg-accent"
-      >
-        <Avatar name={sampleUser.name} tone={sampleUser.tone} size="sm" online />
-      </button>
+      <UserMenu triggerClassName="inline-flex size-11 items-center justify-center surface-floating transition-colors duration-150 hover:bg-accent">
+        <Avatar name={user?.name ?? "Account"} size="sm" online />
+      </UserMenu>
     </div>
   );
 }

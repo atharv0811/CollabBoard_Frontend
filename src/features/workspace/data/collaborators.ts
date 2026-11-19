@@ -5,9 +5,3 @@ export const sampleCollaborators: AvatarStackPerson[] = [
   { name: "Marco Ruiz", tone: "sky" },
   { name: "Lena Okafor", tone: "rose" },
 ];
-
-export const sampleUser = {
-  name: "Alex Morgan",
-  email: "alex@collabboard.app",
-  tone: "teal",
-} as const;
