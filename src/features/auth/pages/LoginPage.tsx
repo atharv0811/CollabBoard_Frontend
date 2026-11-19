@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ import { paths } from "@/lib/paths";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from ?? paths.workspace;
   const loginMutation = useLoginUserMutation();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,7 +31,7 @@ export default function LoginPage() {
       {
         onSuccess: ({ user }) => {
           toast.success(`Welcome back, ${user.name}!`);
-          navigate(paths.workspace, { replace: true });
+          navigate(redirectTo, { replace: true });
         },
         onError: (error) => {
           toast.error(getApiErrorMessage(error, "Couldn't log you in. Please try again."), { id: "login-error" });

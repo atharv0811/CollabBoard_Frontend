@@ -1,4 +1,5 @@
 import type { RouteObject } from "react-router-dom";
+import { PublicRoute } from "@/features/auth/components/PublicRoute";
 import { AuthLayout, type AuthRouteHandle } from "@/features/auth/layouts/AuthLayout";
 import LoginPage from "@/features/auth/pages/LoginPage";
 import RegisterPage from "@/features/auth/pages/RegisterPage";
@@ -19,9 +20,14 @@ const registerHandle: AuthRouteHandle = {
 };
 
 export const authRoutes: RouteObject = {
-  element: <AuthLayout />,
+  element: <PublicRoute />,
   children: [
-    { path: paths.login, element: <LoginPage />, handle: loginHandle },
-    { path: paths.register, element: <RegisterPage />, handle: registerHandle },
+    {
+      element: <AuthLayout />,
+      children: [
+        { path: paths.login, element: <LoginPage />, handle: loginHandle },
+        { path: paths.register, element: <RegisterPage />, handle: registerHandle },
+      ],
+    },
   ],
 };
