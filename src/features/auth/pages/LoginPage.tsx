@@ -1,22 +1,48 @@
-import { Link } from "react-router-dom";
-import { Lock, Mail } from "lucide-react";
-import { Checkbox } from "@/components/common/Checkbox";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { toast } from "sonner";
 import { Divider } from "@/components/common/Divider";
+import { IconButton } from "@/components/common/IconButton";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/ui/button";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField } from "@/features/auth/components/FormField";
 import { SocialAuthButton } from "@/features/auth/components/SocialAuthButton";
+import { useLoginUserMutation } from "@/features/auth/hooks/loginUserMutation";
 import { useLoginForm } from "@/features/auth/hooks/useLoginForm";
 import { fieldAria } from "@/features/auth/lib/fieldAria";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { paths } from "@/lib/paths";
 
 export default function LoginPage() {
-  const { form, onSubmit } = useLoginForm();
+  const navigate = useNavigate();
+  const loginMutation = useLoginUserMutation();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const { form, onSubmit } = useLoginForm((data) => {
+    loginMutation.mutate(
+      {
+        email: data.email,
+        password: data.password,
+      },
+      {
+        onSuccess: ({ user }) => {
+          toast.success(`Welcome back, ${user.name}!`);
+          navigate(paths.workspace, { replace: true });
+        },
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, "Couldn't log you in. Please try again."), { id: "login-error" });
+        },
+      },
+    );
+  });
+
   const {
     register,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = form;
+  const isLoggingIn = loginMutation.isPending;
 
   return (
     <AuthCard
@@ -63,19 +89,25 @@ export default function LoginPage() {
         >
           <Input
             id="login-password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="Enter your password"
             icon={Lock}
+            trailing={
+              <IconButton
+                icon={showPassword ? EyeOff : Eye}
+                label={showPassword ? "Hide password" : "Show password"}
+                size="sm"
+                onClick={() => setShowPassword(!showPassword)}
+              />
+            }
             {...fieldAria("login-password", { error: errors.password?.message })}
             {...register("password")}
           />
         </FormField>
 
-        <Checkbox id="login-remember" label="Remember me for 30 days" {...register("remember")} />
-
-        <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Logging in…" : "Log in"}
+        <Button type="submit" size="lg" className="mt-1 w-full" disabled={isLoggingIn}>
+          {isLoggingIn ? "Logging in…" : "Log in"}
         </Button>
       </form>
     </AuthCard>

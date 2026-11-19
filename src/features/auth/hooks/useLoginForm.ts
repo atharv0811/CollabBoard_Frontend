@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { loginSchema, type LoginFormInput, type LoginFormValues } from "@/features/auth/schemas/authSchemas";
 
-const defaultValues: LoginFormInput = { email: "", password: "", remember: false };
+const defaultValues: LoginFormInput = { email: "", password: "" };
 
 export function useLoginForm(onValid?: SubmitHandler<LoginFormValues>) {
   const form = useForm<LoginFormInput, unknown, LoginFormValues>({

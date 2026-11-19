@@ -10,20 +10,20 @@ function issuesByField(result: { success: boolean; error?: { issues: { path: Pro
 
 describe("loginSchema", () => {
   it("accepts a valid login and trims the email", () => {
-    const result = loginSchema.safeParse({ email: "  ada@example.com ", password: " pw ", remember: true });
+    const result = loginSchema.safeParse({ email: "  ada@example.com ", password: " pw " });
     assert.ok(result.success);
     assert.equal(result.data.email, "ada@example.com");
     assert.equal(result.data.password, " pw ", "passwords are never trimmed");
   });
 
   it("requires email and password", () => {
-    const errors = issuesByField(loginSchema.safeParse({ email: "", password: "", remember: false }));
+    const errors = issuesByField(loginSchema.safeParse({ email: "", password: "" }));
     assert.equal(errors.email, "Enter your email.");
     assert.equal(errors.password, "Enter your password.");
   });
 
   it("rejects a malformed email", () => {
-    const errors = issuesByField(loginSchema.safeParse({ email: "not-an-email", password: "x", remember: false }));
+    const errors = issuesByField(loginSchema.safeParse({ email: "not-an-email", password: "x" }));
     assert.equal(errors.email, "Enter a valid email address.");
   });
 });

@@ -9,7 +9,6 @@ const emailField = z.string().trim().min(1, "Enter your email.").pipe(z.email("E
 export const loginSchema = z.object({
   email: emailField,
   password: z.string().min(1, "Enter your password."),
-  remember: z.boolean(),
 });
 
 export const registerSchema = z
