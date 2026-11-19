@@ -454,7 +454,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>) {
     switch (gesture.kind) {
       case "draw": {
         const element = elementFromDraft(updateDraft(gesture.draft, samples), createId());
-        if (element) store.addElement(element);
+        if (element) store.finishDrawing(element);
         return;
       }
       case "marquee":

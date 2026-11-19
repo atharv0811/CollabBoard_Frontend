@@ -32,6 +32,7 @@ export interface WorkspaceState {
 export interface WorkspaceActions {
   loadDocument: (boardId: string, document: LoadedDocument) => void;
   addElement: (element: CanvasElement) => void;
+  finishDrawing: (element: CanvasElement) => void;
   updateElements: (updated: readonly CanvasElement[]) => void;
   deleteElements: (ids: readonly string[]) => void;
   deleteSelected: () => number;
@@ -111,6 +112,12 @@ export const createWorkspaceStore = () =>
         }),
 
       addElement: (element) => commit([...get().elements, element]),
+
+      // After a shape is drawn, go back to the Select tool.
+      finishDrawing: (element) => {
+        get().addElement(element);
+        set({ activeTool: "selection" });
+      },
 
       updateElements: (updated) => {
         const byId = new Map(updated.map((element) => [element.id, element]));

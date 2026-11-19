@@ -377,6 +377,20 @@ describe("workspace store", () => {
     assert.deepEqual(store.getState().selectedIds, []);
   });
 
+  test("finishing a drawing adds the element and switches back to the Select tool", () => {
+    const store = createWorkspaceStore();
+    store.getState().setActiveTool("rectangle");
+    store.getState().finishDrawing(rect);
+    assert.deepEqual(
+      store.getState().elements.map((e) => e.id),
+      ["rect"],
+    );
+    assert.equal(store.getState().activeTool, "selection");
+
+    store.getState().undo();
+    assert.deepEqual(store.getState().elements, [], "the drawing is still one undoable step");
+  });
+
   test("deleteElements also removes deleted ids from the selection", () => {
     const store = setup();
     store.getState().setSelection(["rect", "ellipse"]);
