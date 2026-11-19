@@ -7,9 +7,17 @@ import { Button } from "@/components/ui/button";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField } from "@/features/auth/components/FormField";
 import { SocialAuthButton } from "@/features/auth/components/SocialAuthButton";
+import { useLoginForm } from "@/features/auth/hooks/useLoginForm";
+import { fieldAria } from "@/features/auth/lib/fieldAria";
 import { paths } from "@/lib/paths";
 
 export default function LoginPage() {
+  const { form, onSubmit } = useLoginForm();
+  const {
+    register,
+    formState: { errors, isSubmitting },
+  } = form;
+
   return (
     <AuthCard
       title="Welcome back"
@@ -27,21 +35,23 @@ export default function LoginPage() {
 
       <Divider label="or continue with email" className="my-6" />
 
-      <form noValidate className="flex flex-col gap-5">
-        <FormField label="Email" htmlFor="login-email">
+      <form noValidate onSubmit={onSubmit} className="flex flex-col gap-5">
+        <FormField label="Email" htmlFor="login-email" error={errors.email?.message}>
           <Input
             id="login-email"
-            name="email"
             type="email"
             autoComplete="email"
             placeholder="you@company.com"
             icon={Mail}
+            {...fieldAria("login-email", { error: errors.email?.message })}
+            {...register("email")}
           />
         </FormField>
 
         <FormField
           label="Password"
           htmlFor="login-password"
+          error={errors.password?.message}
           labelAside={
             <Link
               to={paths.forgotPassword}
@@ -53,18 +63,19 @@ export default function LoginPage() {
         >
           <Input
             id="login-password"
-            name="password"
             type="password"
             autoComplete="current-password"
             placeholder="Enter your password"
             icon={Lock}
+            {...fieldAria("login-password", { error: errors.password?.message })}
+            {...register("password")}
           />
         </FormField>
 
-        <Checkbox id="login-remember" name="remember" label="Remember me for 30 days" />
+        <Checkbox id="login-remember" label="Remember me for 30 days" {...register("remember")} />
 
-        <Button type="button" size="lg" className="mt-1 w-full">
-          Log in
+        <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Logging in…" : "Log in"}
         </Button>
       </form>
     </AuthCard>

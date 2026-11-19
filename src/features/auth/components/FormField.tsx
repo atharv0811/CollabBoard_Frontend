@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { fieldErrorId, fieldHintId } from "@/features/auth/lib/fieldAria";
 
 interface FormFieldProps {
   label: string;
@@ -6,11 +7,10 @@ interface FormFieldProps {
   children: ReactNode;
   labelAside?: ReactNode;
   hint?: string;
+  error?: string;
 }
 
-export function FormField({ label, htmlFor, children, labelAside, hint }: FormFieldProps) {
-  const hintId = hint ? `${htmlFor}-hint` : undefined;
-
+export function FormField({ label, htmlFor, children, labelAside, hint, error }: FormFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
@@ -20,10 +20,16 @@ export function FormField({ label, htmlFor, children, labelAside, hint }: FormFi
         {labelAside}
       </div>
       {children}
-      {hint && (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
+      {error ? (
+        <p id={fieldErrorId(htmlFor)} role="alert" className="text-xs text-destructive">
+          {error}
         </p>
+      ) : (
+        hint && (
+          <p id={fieldHintId(htmlFor)} className="text-xs text-muted-foreground">
+            {hint}
+          </p>
+        )
       )}
     </div>
   );

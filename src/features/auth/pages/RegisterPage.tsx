@@ -6,9 +6,20 @@ import { Button } from "@/components/ui/button";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField } from "@/features/auth/components/FormField";
 import { SocialAuthButton } from "@/features/auth/components/SocialAuthButton";
+import { useRegisterForm } from "@/features/auth/hooks/useRegisterForm";
+import { fieldAria } from "@/features/auth/lib/fieldAria";
+import { PASSWORD_MIN_LENGTH } from "@/features/auth/schemas/authSchemas";
 import { paths } from "@/lib/paths";
 
+const passwordHint = `Use at least ${PASSWORD_MIN_LENGTH} characters.`;
+
 export default function RegisterPage() {
+  const { form, onSubmit } = useRegisterForm();
+  const {
+    register,
+    formState: { errors, isSubmitting },
+  } = form;
+
   return (
     <AuthCard
       title="Create your account"
@@ -26,47 +37,57 @@ export default function RegisterPage() {
 
       <Divider label="or sign up with email" className="my-6" />
 
-      <form noValidate className="flex flex-col gap-5">
-        <FormField label="Full name" htmlFor="register-name">
-          <Input id="register-name" name="name" type="text" autoComplete="name" placeholder="Alex Morgan" icon={User} />
+      <form noValidate onSubmit={onSubmit} className="flex flex-col gap-5">
+        <FormField label="Full name" htmlFor="register-name" error={errors.name?.message}>
+          <Input
+            id="register-name"
+            type="text"
+            autoComplete="name"
+            placeholder="Alex Morgan"
+            icon={User}
+            {...fieldAria("register-name", { error: errors.name?.message })}
+            {...register("name")}
+          />
         </FormField>
 
-        <FormField label="Email" htmlFor="register-email">
+        <FormField label="Email" htmlFor="register-email" error={errors.email?.message}>
           <Input
             id="register-email"
-            name="email"
             type="email"
             autoComplete="email"
             placeholder="you@company.com"
             icon={Mail}
+            {...fieldAria("register-email", { error: errors.email?.message })}
+            {...register("email")}
           />
         </FormField>
 
-        <FormField label="Password" htmlFor="register-password" hint="Use at least 8 characters.">
+        <FormField label="Password" htmlFor="register-password" hint={passwordHint} error={errors.password?.message}>
           <Input
             id="register-password"
-            name="password"
             type="password"
             autoComplete="new-password"
             placeholder="Create a password"
             icon={Lock}
-            aria-describedby="register-password-hint"
+            {...fieldAria("register-password", { error: errors.password?.message, hint: passwordHint })}
+            {...register("password", { deps: ["confirmPassword"] })}
           />
         </FormField>
 
-        <FormField label="Confirm password" htmlFor="register-confirm-password">
+        <FormField label="Confirm password" htmlFor="register-confirm-password" error={errors.confirmPassword?.message}>
           <Input
             id="register-confirm-password"
-            name="confirmPassword"
             type="password"
             autoComplete="new-password"
             placeholder="Repeat your password"
             icon={Lock}
+            {...fieldAria("register-confirm-password", { error: errors.confirmPassword?.message })}
+            {...register("confirmPassword")}
           />
         </FormField>
 
-        <Button type="button" size="lg" className="mt-1 w-full">
-          Create account
+        <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Creating account…" : "Create account"}
         </Button>
 
         <p className="text-center text-xs leading-relaxed text-muted-foreground">
