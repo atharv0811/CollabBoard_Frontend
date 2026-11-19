@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/common/Badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -49,10 +50,10 @@ export function HeroSection() {
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={paths.workspace} className={buttonVariants({ size: "xl" })}>
+            <Link to={paths.workspace} className={buttonVariants({ size: "xl" })}>
               Start drawing
               <ArrowRight aria-hidden="true" />
-            </a>
+            </Link>
             <a href="#preview" className={buttonVariants({ size: "xl", variant: "outline" })}>
               Explore workspace
             </a>

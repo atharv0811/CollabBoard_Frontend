@@ -1,38 +1,55 @@
-import type { ReactNode } from "react";
+import { Link, Outlet, useMatches } from "react-router-dom";
 import { CollaboratorCursor } from "@/components/common/CollaboratorCursor";
 import { Logo } from "@/components/common/Logo";
 import { BoardSketch } from "@/components/illustrations/BoardSketch";
 import { paths } from "@/lib/paths";
 
-interface AuthLayoutProps {
-  children: ReactNode;
-  panelTitle: string;
-  panelDescription: string;
+export interface AuthPanelContent {
+  title: string;
+  description: string;
 }
 
-export function AuthLayout({ children, panelTitle, panelDescription }: AuthLayoutProps) {
+/** Route `handle` shape read by {@link AuthLayout} to fill the side panel. */
+export interface AuthRouteHandle {
+  authPanel: AuthPanelContent;
+}
+
+function useAuthPanel(): AuthPanelContent | undefined {
+  const matches = useMatches();
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const handle = matches[i].handle as Partial<AuthRouteHandle> | undefined;
+    if (handle?.authPanel) return handle.authPanel;
+  }
+  return undefined;
+}
+
+export function AuthLayout() {
+  const panel = useAuthPanel();
+
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="flex flex-col px-4 py-6 sm:px-10">
         <header>
-          <a href={paths.landing} aria-label="CollabBoard home" className="inline-flex rounded-md">
+          <Link to={paths.landing} aria-label="CollabBoard home" className="inline-flex rounded-md">
             <Logo />
-          </a>
+          </Link>
         </header>
 
         <main className="flex flex-1 items-center justify-center py-12">
-          <div className="w-full max-w-100">{children}</div>
+          <div className="w-full max-w-100">
+            <Outlet />
+          </div>
         </main>
 
         <footer className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© 2026 CollabBoard</span>
           <span className="flex gap-4">
-            <a href={paths.privacy} className="transition-colors hover:text-foreground">
+            <Link to={paths.privacy} className="transition-colors hover:text-foreground">
               Privacy
-            </a>
-            <a href={paths.terms} className="transition-colors hover:text-foreground">
+            </Link>
+            <Link to={paths.terms} className="transition-colors hover:text-foreground">
               Terms
-            </a>
+            </Link>
           </span>
         </footer>
       </div>
@@ -49,8 +66,8 @@ export function AuthLayout({ children, panelTitle, panelDescription }: AuthLayou
           </div>
 
           <div className="mt-10">
-            <h2 className="text-2xl font-semibold tracking-tight text-balance text-foreground">{panelTitle}</h2>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">{panelDescription}</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-balance text-foreground">{panel?.title}</h2>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">{panel?.description}</p>
           </div>
         </div>
       </aside>

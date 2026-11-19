@@ -1,6 +1,6 @@
 import { Logo } from "@/components/common/Logo";
 import { cn } from "@/lib/utils";
-import { useBoardsStore } from "@/features/boards/boardsStore";
+import { useBoardsStore } from "@/features/boards/store/boardsStore";
 import { BoardsSection } from "@/features/boards/components/BoardsSection";
 import { mainActions } from "../data/menuItems";
 import { SidebarFooter } from "./SidebarFooter";

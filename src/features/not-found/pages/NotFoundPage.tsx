@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { buttonVariants } from "@/components/ui/button";
@@ -9,9 +10,9 @@ export default function NotFoundPage() {
       <div aria-hidden="true" className="absolute inset-0 bg-dot-grid mask-fade-y" />
 
       <header className="relative px-4 py-6 sm:px-10">
-        <a href={paths.landing} aria-label="CollabBoard home" className="inline-flex rounded-md">
+        <Link to={paths.landing} aria-label="CollabBoard home" className="inline-flex rounded-md">
           <Logo />
-        </a>
+        </Link>
       </header>
 
       <main className="relative flex flex-1 items-center justify-center px-4 pb-24">
@@ -24,13 +25,13 @@ export default function NotFoundPage() {
             The link may be broken, or the page may not exist yet.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={paths.landing} className={buttonVariants({ size: "lg" })}>
+            <Link to={paths.landing} className={buttonVariants({ size: "lg" })}>
               <ArrowLeft aria-hidden="true" />
               Back to home
-            </a>
-            <a href={paths.workspace} className={buttonVariants({ size: "lg", variant: "outline" })}>
+            </Link>
+            <Link to={paths.workspace} className={buttonVariants({ size: "lg", variant: "outline" })}>
               Open workspace
-            </a>
+            </Link>
           </div>
         </div>
       </main>

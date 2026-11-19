@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { paths } from "@/lib/paths";
@@ -15,13 +16,13 @@ export function FinalCta() {
             Open a board, invite your team and start sketching in under a minute.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={paths.register} className={buttonVariants({ size: "xl" })}>
+            <Link to={paths.register} className={buttonVariants({ size: "xl" })}>
               Start drawing for free
               <ArrowRight aria-hidden="true" />
-            </a>
-            <a href={paths.login} className={buttonVariants({ size: "xl", variant: "ghost" })}>
+            </Link>
+            <Link to={paths.login} className={buttonVariants({ size: "xl", variant: "ghost" })}>
               I already have an account
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/ui/button";
-import { useBoardsStore } from "../boardsStore";
-import { MAX_BOARD_NAME_LENGTH, nextDefaultName } from "../model";
+import { useBoardsStore } from "../store/boardsStore";
+import { MAX_BOARD_NAME_LENGTH, nextDefaultName } from "../lib/model";
 
 interface ModalProps {
   title: string;

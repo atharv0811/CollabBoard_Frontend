@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Logo } from "@/components/common/Logo";
 import { paths } from "@/lib/paths";
 
@@ -28,6 +29,8 @@ const columns = [
   },
 ];
 
+const linkClassName = "text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground";
+
 export function Footer() {
   return (
     <footer className="border-t border-border">
@@ -45,12 +48,15 @@ export function Footer() {
             <ul className="mt-3 flex flex-col gap-2">
               {column.links.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
-                  >
-                    {link.label}
-                  </a>
+                  {link.href.startsWith("/") ? (
+                    <Link to={link.href} className={linkClassName}>
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a href={link.href} className={linkClassName}>
+                      {link.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

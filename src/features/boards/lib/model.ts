@@ -1,5 +1,5 @@
-import type { CanvasElement } from "../workspace/canvas/elements.ts";
-import { DEFAULT_VIEWPORT, type Viewport } from "../workspace/canvas/viewport.ts";
+import type { CanvasElement } from "../../workspace/canvas/elements.ts";
+import { DEFAULT_VIEWPORT, type Viewport } from "../../workspace/canvas/viewport.ts";
 
 export const DEFAULT_BOARD_NAME = "Untitled board";
 export const MAX_BOARD_NAME_LENGTH = 80;

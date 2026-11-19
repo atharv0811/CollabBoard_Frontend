@@ -1,6 +1,6 @@
 import { create, type StoreApi } from "zustand";
-import { createId } from "../../lib/createId.ts";
-import { useWorkspaceStore, type WorkspaceStore } from "../workspace/store/workspaceStore.ts";
+import { createId } from "../../../lib/createId.ts";
+import { useWorkspaceStore, type WorkspaceStore } from "../../workspace/store/workspaceStore.ts";
 import {
   checkBoardName,
   DEFAULT_BOARD_NAME,
@@ -8,7 +8,7 @@ import {
   nextDefaultName,
   type BoardDocument,
   type BoardMeta,
-} from "./model.ts";
+} from "../lib/model.ts";
 
 export type ActionResult = { ok: true } | { ok: false; reason: string };
 

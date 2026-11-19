@@ -1,4 +1,6 @@
 import axios from "axios";
+import { navigateTo } from "@/lib/navigation";
+import { paths } from "@/lib/paths";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -20,7 +22,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.clear();
 
-      window.location.href = "/login";
+      navigateTo(paths.login, { replace: true });
     }
 
     return Promise.reject(error);

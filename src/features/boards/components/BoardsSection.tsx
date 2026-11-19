@@ -1,6 +1,6 @@
 import { LayoutGrid, Pencil, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useBoardsStore } from "../boardsStore";
+import { useBoardsStore } from "../store/boardsStore";
 
 const rowAction =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-colors duration-150 group-hover/row:text-muted-foreground hover:bg-accent hover:text-foreground";

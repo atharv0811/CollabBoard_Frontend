@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { IconButton } from "@/components/common/IconButton";
 import { Logo } from "@/components/common/Logo";
@@ -15,9 +16,9 @@ export function MarketingNavbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
-        <a href={paths.landing} aria-label="CollabBoard home" className="rounded-md">
+        <Link to={paths.landing} aria-label="CollabBoard home" className="rounded-md">
           <Logo />
-        </a>
+        </Link>
 
         <nav aria-label="Primary" className="hidden md:block">
           <ul className="flex items-center gap-1">
@@ -35,12 +36,12 @@ export function MarketingNavbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <a href={paths.login} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+          <Link to={paths.login} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Log in
-          </a>
-          <a href={paths.register} className={buttonVariants()}>
+          </Link>
+          <Link to={paths.register} className={buttonVariants()}>
             Get started
-          </a>
+          </Link>
           <IconButton icon={Menu} label="Open navigation" className="md:hidden" />
         </div>
       </div>

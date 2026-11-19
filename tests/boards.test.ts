@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createBoardsStore } from "../src/features/boards/boardsStore.ts";
-import { checkBoardName, nextDefaultName, type BoardMeta } from "../src/features/boards/model.ts";
+import { createBoardsStore } from "../src/features/boards/store/boardsStore.ts";
+import { checkBoardName, nextDefaultName, type BoardMeta } from "../src/features/boards/lib/model.ts";
 import { DEFAULT_STYLE, type CanvasElement } from "../src/features/workspace/canvas/elements.ts";
 import { DEFAULT_VIEWPORT } from "../src/features/workspace/canvas/viewport.ts";
 import { createWorkspaceStore } from "../src/features/workspace/store/workspaceStore.ts";
