@@ -1,6 +1,9 @@
-import { Link } from "react-router-dom";
-import { Lock, Mail, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { toast } from "sonner";
 import { Divider } from "@/components/common/Divider";
+import { IconButton } from "@/components/common/IconButton";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/ui/button";
 import { AuthCard } from "@/features/auth/components/AuthCard";
@@ -9,16 +12,44 @@ import { SocialAuthButton } from "@/features/auth/components/SocialAuthButton";
 import { useRegisterForm } from "@/features/auth/hooks/useRegisterForm";
 import { fieldAria } from "@/features/auth/lib/fieldAria";
 import { PASSWORD_MIN_LENGTH } from "@/features/auth/schemas/authSchemas";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { paths } from "@/lib/paths";
+import { useRegisterUserMutation } from "../hooks/mutations/registerUserMutation";
 
 const passwordHint = `Use at least ${PASSWORD_MIN_LENGTH} characters.`;
 
 export default function RegisterPage() {
-  const { form, onSubmit } = useRegisterForm();
+  const navigate = useNavigate();
+  const registerMutation = useRegisterUserMutation();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const { form, onSubmit } = useRegisterForm((data) => {
+    registerMutation.mutate(
+      {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      },
+      {
+        onSuccess: (user) => {
+          toast.success("Account created! Log in to continue.");
+          navigate(paths.login, { replace: true, state: { email: user.email } });
+        },
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, "Couldn't create your account. Please try again."), {
+            id: "register-error",
+          });
+        },
+      },
+    );
+  });
+
   const {
     register,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = form;
+  const isRegistering = registerMutation.isPending;
 
   return (
     <AuthCard
@@ -65,10 +96,18 @@ export default function RegisterPage() {
         <FormField label="Password" htmlFor="register-password" hint={passwordHint} error={errors.password?.message}>
           <Input
             id="register-password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
             placeholder="Create a password"
             icon={Lock}
+            trailing={
+              <IconButton
+                icon={showPassword ? EyeOff : Eye}
+                label={showPassword ? "Hide password" : "Show password"}
+                size="sm"
+                onClick={() => setShowPassword(!showPassword)}
+              />
+            }
             {...fieldAria("register-password", { error: errors.password?.message, hint: passwordHint })}
             {...register("password", { deps: ["confirmPassword"] })}
           />
@@ -77,17 +116,25 @@ export default function RegisterPage() {
         <FormField label="Confirm password" htmlFor="register-confirm-password" error={errors.confirmPassword?.message}>
           <Input
             id="register-confirm-password"
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             autoComplete="new-password"
             placeholder="Repeat your password"
             icon={Lock}
+            trailing={
+              <IconButton
+                icon={showConfirmPassword ? EyeOff : Eye}
+                label={showConfirmPassword ? "Hide password" : "Show password"}
+                size="sm"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              />
+            }
             {...fieldAria("register-confirm-password", { error: errors.confirmPassword?.message })}
             {...register("confirmPassword")}
           />
         </FormField>
 
-        <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account…" : "Create account"}
+        <Button type="submit" size="lg" className="mt-1 w-full" disabled={isRegistering}>
+          {isRegistering ? "Creating account…" : "Create account"}
         </Button>
 
         <p className="text-center text-xs leading-relaxed text-muted-foreground">

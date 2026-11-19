@@ -9,16 +9,17 @@ import { Button } from "@/components/ui/button";
 import { AuthCard } from "@/features/auth/components/AuthCard";
 import { FormField } from "@/features/auth/components/FormField";
 import { SocialAuthButton } from "@/features/auth/components/SocialAuthButton";
-import { useLoginUserMutation } from "@/features/auth/hooks/loginUserMutation";
 import { useLoginForm } from "@/features/auth/hooks/useLoginForm";
 import { fieldAria } from "@/features/auth/lib/fieldAria";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { paths } from "@/lib/paths";
+import { useLoginUserMutation } from "../hooks/mutations/loginUserMutation";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = location.state?.from ?? paths.workspace;
+  const registeredEmail = location.state?.email ?? "";
   const loginMutation = useLoginUserMutation();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -38,7 +39,7 @@ export default function LoginPage() {
         },
       },
     );
-  });
+  }, registeredEmail);
 
   const {
     register,
@@ -94,6 +95,7 @@ export default function LoginPage() {
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="Enter your password"
+            autoFocus={Boolean(registeredEmail)}
             icon={Lock}
             trailing={
               <IconButton
