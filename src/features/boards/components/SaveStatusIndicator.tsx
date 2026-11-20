@@ -20,13 +20,14 @@ const APPEARANCE: Record<SaveStatus, { label: string; icon: LucideIcon; tone: st
 
 export function SaveStatusIndicator({ className, floating = false, status }: SaveStatusIndicatorProps) {
   const storedStatus = useSaveStatusStore((state) => state.status);
-  const { label, icon: Icon, tone, spin } = APPEARANCE[status ?? storedStatus];
+  const displayedStatus = status ?? storedStatus;
+  const { label, icon: Icon, tone, spin } = APPEARANCE[displayedStatus];
 
   return (
     <span
       role="status"
       aria-live="polite"
-      data-save-status={status}
+      data-save-status={displayedStatus}
       className={cn(
         "pointer-events-auto flex items-center gap-1.5 text-xs whitespace-nowrap",
         floating && "h-9 surface-floating px-3",
