@@ -24,6 +24,11 @@ export interface CreateBoardPayload {
   document: BoardDocument;
 }
 
+export interface RenameBoardPayload {
+  boardId: string;
+  name: string;
+}
+
 export interface BoardResponse extends BoardMeta {
   document: BoardDocument;
   ownerId: string;

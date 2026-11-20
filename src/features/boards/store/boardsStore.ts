@@ -132,6 +132,10 @@ export const createBoardsStore = (options: BoardsStoreOptions = {}) => {
         }
 
         const fallback = boards.at(-1);
+        if (!fallback && !seedDefaultBoard) {
+          set({ boards, documents, activeBoardId: "" });
+          return { ok: true };
+        }
         const next = fallback ?? newBoard(nextDefaultName(boards));
         const document = documents[next.id] ?? emptyDocument();
         set({

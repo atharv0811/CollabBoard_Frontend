@@ -3,6 +3,8 @@ import { Input } from "@/components/common/Input";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { useCreateBoardMutation } from "../hooks/mutations/useCreateBoardMutation";
+import { useDeleteBoardMutation } from "../hooks/mutations/useDeleteBoardMutation";
+import { useRenameBoardMutation } from "../hooks/mutations/useRenameBoardMutation";
 import { useBoardsStore } from "../store/boardsStore";
 import { checkBoardName, MAX_BOARD_NAME_LENGTH, nextDefaultName } from "../lib/model";
 
@@ -56,7 +58,6 @@ function Modal({ title, description, onClose, children }: ModalProps) {
 function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId?: string }) {
   const boards = useBoardsStore((state) => state.boards);
   const closeDialog = useBoardsStore((state) => state.closeDialog);
-  const renameBoard = useBoardsStore((state) => state.renameBoard);
   const current = boards.find((board) => board.id === boardId);
   const [name, setName] = useState(() => (mode === "rename" ? (current?.name ?? "") : nextDefaultName(boards)));
   const [error, setError] = useState<string | null>(null);
@@ -64,29 +65,44 @@ function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId
   const errorId = useId();
 
   const createBoard = useCreateBoardMutation();
-  const creating = createBoard.isPending;
+  const renameBoard = useRenameBoardMutation();
+  const saving = createBoard.isPending || renameBoard.isPending;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (creating) return;
+    if (saving) return;
 
-    if (mode === "rename") {
-      const result = renameBoard(boardId ?? "", name);
-      if (result.ok) closeDialog();
-      else setError(result.reason);
-      return;
-    }
-
-    const check = checkBoardName(name, boards);
+    const check = checkBoardName(name, boards, mode === "rename" ? boardId : undefined);
     if (!check.ok) {
       setError(check.reason);
       return;
     }
-    createBoard.mutate(check.name, {
+
+    const callbacks = {
       onSuccess: () => closeDialog(),
-      onError: (createError) => setError(getApiErrorMessage(createError, "Couldn't create the board. Please try again.")),
-    });
+      onError: (mutationError: unknown) =>
+        setError(
+          getApiErrorMessage(
+            mutationError,
+            mode === "create"
+              ? "Couldn't create the board. Please try again."
+              : "Couldn't rename the board. Please try again.",
+          ),
+        ),
+    };
+
+    if (mode === "rename") {
+      if (check.name === current?.name) {
+        closeDialog();
+        return;
+      }
+      renameBoard.mutate({ boardId: boardId ?? "", name: check.name }, callbacks);
+    } else {
+      createBoard.mutate(check.name, callbacks);
+    }
   };
+
+  const submitLabel = mode === "create" ? (saving ? "Creating…" : "Create board") : saving ? "Renaming…" : "Rename";
 
   return (
     <Modal
@@ -124,8 +140,8 @@ function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId
           <Button type="button" variant="ghost" onClick={closeDialog}>
             Cancel
           </Button>
-          <Button type="submit" disabled={creating}>
-            {mode === "create" ? (creating ? "Creating…" : "Create board") : "Rename"}
+          <Button type="submit" disabled={saving}>
+            {submitLabel}
           </Button>
         </div>
       </form>
@@ -137,15 +153,21 @@ function DeleteBoardDialog({ boardId }: { boardId: string }) {
   const boards = useBoardsStore((state) => state.boards);
   const activeBoardId = useBoardsStore((state) => state.activeBoardId);
   const closeDialog = useBoardsStore((state) => state.closeDialog);
-  const deleteBoard = useBoardsStore((state) => state.deleteBoard);
+  const deleteBoard = useDeleteBoardMutation();
+  const [error, setError] = useState<string | null>(null);
 
   const name = boards.find((board) => board.id === boardId)?.name ?? "this board";
   const isActive = boardId === activeBoardId;
   const isLast = isActive && boards.length === 1;
 
   const confirm = () => {
-    deleteBoard(boardId);
-    closeDialog();
+    if (deleteBoard.isPending) return;
+    setError(null);
+    deleteBoard.mutate(boardId, {
+      onSuccess: () => closeDialog(),
+      onError: (deleteError) =>
+        setError(getApiErrorMessage(deleteError, "Couldn't delete the board. Please try again.")),
+    });
   };
 
   return (
@@ -159,12 +181,17 @@ function DeleteBoardDialog({ boardId }: { boardId: string }) {
       }
       onClose={closeDialog}
     >
+      {error && (
+        <p role="alert" className="mb-3 text-xs text-destructive">
+          {error}
+        </p>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={closeDialog} autoFocus>
           Cancel
         </Button>
-        <Button type="button" variant="destructive" onClick={confirm}>
-          Delete board
+        <Button type="button" variant="destructive" onClick={confirm} disabled={deleteBoard.isPending}>
+          {deleteBoard.isPending ? "Deleting…" : "Delete board"}
         </Button>
       </div>
     </Modal>

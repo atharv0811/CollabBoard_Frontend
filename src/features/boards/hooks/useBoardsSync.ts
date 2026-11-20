@@ -20,6 +20,7 @@ export function useBoardsSync() {
   }, [query.isSuccess, boards, syncBoards]);
 
   useEffect(() => {
+    if (total !== undefined && total > 0) autoCreated.current = false;
     if (!query.isSuccess || total !== 0 || autoCreated.current) return;
     autoCreated.current = true;
     createBoard(DEFAULT_BOARD_NAME, {
