@@ -29,6 +29,11 @@ export interface RenameBoardPayload {
   name: string;
 }
 
+export interface UpdateBoardDocumentPayload {
+  boardId: string;
+  document: BoardDocument;
+}
+
 export interface DeleteBoardResponse {
   message: string;
 }

@@ -1,5 +1,6 @@
 import { Check, CloudOff, LoaderCircle, TriangleAlert, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSaveStatusStore } from "../store/saveStatusStore";
 
 export type SaveStatus = "saved" | "pending" | "saving" | "error" | "temporary";
 
@@ -17,8 +18,9 @@ const APPEARANCE: Record<SaveStatus, { label: string; icon: LucideIcon; tone: st
   temporary: { label: "Not saved", icon: CloudOff, tone: "text-destructive" },
 };
 
-export function SaveStatusIndicator({ className, floating = false, status = "saved" }: SaveStatusIndicatorProps) {
-  const { label, icon: Icon, tone, spin } = APPEARANCE[status];
+export function SaveStatusIndicator({ className, floating = false, status }: SaveStatusIndicatorProps) {
+  const storedStatus = useSaveStatusStore((state) => state.status);
+  const { label, icon: Icon, tone, spin } = APPEARANCE[status ?? storedStatus];
 
   return (
     <span

@@ -1,5 +1,6 @@
 import { BoardDialogs } from "@/features/boards/components/BoardDialogs";
 import { SaveStatusIndicator } from "@/features/boards/components/SaveStatusIndicator";
+import { useBoardAutosave } from "@/features/boards/hooks/useBoardAutosave";
 import { useBoardRoute } from "@/features/boards/hooks/useBoardRoute";
 import { useBoardsSync } from "@/features/boards/hooks/useBoardsSync";
 import { CanvasContextBar } from "@/features/workspace/components/CanvasContextBar";
@@ -19,6 +20,7 @@ export default function WorkspacePage() {
   useWorkspaceShortcuts();
   useBoardsSync();
   useBoardRoute();
+  useBoardAutosave();
 
   return (
     <div className="relative h-svh w-full overflow-hidden bg-canvas text-foreground">

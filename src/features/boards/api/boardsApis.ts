@@ -6,6 +6,7 @@ import type {
   DeleteBoardResponse,
   GetBoardsParams,
   RenameBoardPayload,
+  UpdateBoardDocumentPayload,
 } from "../types/boardTypes";
 
 export const getBoards = async (params: GetBoardsParams) => {
@@ -25,6 +26,11 @@ export const createBoard = async (payload: CreateBoardPayload) => {
 
 export const renameBoard = async ({ boardId, name }: RenameBoardPayload) => {
   const { data } = await api.patch(`/boards/${boardId}/name`, { name });
+  return data;
+};
+
+export const updateBoardDocument = async ({ boardId, document }: UpdateBoardDocumentPayload) => {
+  const { data } = await api.patch(`/boards/${boardId}/document`, { document });
   return data;
 };
 
