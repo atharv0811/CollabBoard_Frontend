@@ -9,7 +9,7 @@ import { useBoardsQuery } from "./queries/useBoardsQuery";
 export function useBoardsSync() {
   const query = useBoardsQuery();
   const syncBoards = useBoardsStore((state) => state.syncBoards);
-  const { mutate: createBoard } = useCreateBoardMutation();
+  const { mutate: createBoard } = useCreateBoardMutation({ notifyOnSuccess: false });
   const autoCreated = useRef(false);
 
   const boards = useMemo(() => query.data?.pages.flatMap((page) => page.boards) ?? [], [query.data]);
@@ -23,10 +23,7 @@ export function useBoardsSync() {
     if (total !== undefined && total > 0) autoCreated.current = false;
     if (!query.isSuccess || total !== 0 || autoCreated.current) return;
     autoCreated.current = true;
-    createBoard(DEFAULT_BOARD_NAME, {
-      onError: (error) =>
-        toast.error(getApiErrorMessage(error, "Couldn't create your first board."), { id: "create-board-error" }),
-    });
+    createBoard(DEFAULT_BOARD_NAME);
   }, [query.isSuccess, total, createBoard]);
 
   useEffect(() => {

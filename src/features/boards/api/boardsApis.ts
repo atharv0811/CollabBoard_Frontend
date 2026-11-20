@@ -3,6 +3,7 @@ import type {
   BoardResponse,
   BoardsListResponse,
   CreateBoardPayload,
+  DeleteBoardResponse,
   GetBoardsParams,
   RenameBoardPayload,
 } from "../types/boardTypes";
@@ -23,6 +24,6 @@ export const renameBoard = async ({ boardId, name }: RenameBoardPayload) => {
 };
 
 export const deleteBoard = async (boardId: string) => {
-  const { data } = await api.delete(`/boards/${boardId}`);
+  const { data } = await api.delete<DeleteBoardResponse>(`/boards/${boardId}`);
   return data;
 };

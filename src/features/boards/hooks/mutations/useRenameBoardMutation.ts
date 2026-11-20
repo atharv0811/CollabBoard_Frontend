@@ -1,4 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { renameBoard } from "../../api/boardsApis";
 import { useBoardsStore } from "../../store/boardsStore";
 import type { RenameBoardPayload } from "../../types/boardTypes";
@@ -23,6 +25,10 @@ export const useRenameBoardMutation = () => {
           })),
         };
       });
+      toast.success(`Renamed to “${name}”.`, { id: "rename-board" });
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Couldn't rename the board. Please try again."), { id: "rename-board" });
     },
   });
 };

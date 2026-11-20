@@ -27,7 +27,8 @@ const Toaster = (props: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "font-sans text-[0.8125rem] font-medium shadow-floating! gap-2.5!",
+          toast:
+            "font-sans text-[0.8125rem] font-medium shadow-floating! gap-2.5! inset-x-0! mx-auto! w-fit! max-w-[min(28rem,calc(100vw-2rem))]!",
           description: "text-muted-foreground! font-normal",
         },
       }}

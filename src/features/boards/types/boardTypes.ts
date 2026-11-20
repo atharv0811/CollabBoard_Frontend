@@ -29,6 +29,10 @@ export interface RenameBoardPayload {
   name: string;
 }
 
+export interface DeleteBoardResponse {
+  message: string;
+}
+
 export interface BoardResponse extends BoardMeta {
   document: BoardDocument;
   ownerId: string;

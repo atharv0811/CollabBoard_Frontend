@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/ui/button";
-import { getApiErrorMessage } from "@/lib/apiError";
 import { useCreateBoardMutation } from "../hooks/mutations/useCreateBoardMutation";
 import { useDeleteBoardMutation } from "../hooks/mutations/useDeleteBoardMutation";
 import { useRenameBoardMutation } from "../hooks/mutations/useRenameBoardMutation";
@@ -78,18 +77,7 @@ function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId
       return;
     }
 
-    const callbacks = {
-      onSuccess: () => closeDialog(),
-      onError: (mutationError: unknown) =>
-        setError(
-          getApiErrorMessage(
-            mutationError,
-            mode === "create"
-              ? "Couldn't create the board. Please try again."
-              : "Couldn't rename the board. Please try again.",
-          ),
-        ),
-    };
+    const callbacks = { onSuccess: () => closeDialog() };
 
     if (mode === "rename") {
       if (check.name === current?.name) {
@@ -154,7 +142,6 @@ function DeleteBoardDialog({ boardId }: { boardId: string }) {
   const activeBoardId = useBoardsStore((state) => state.activeBoardId);
   const closeDialog = useBoardsStore((state) => state.closeDialog);
   const deleteBoard = useDeleteBoardMutation();
-  const [error, setError] = useState<string | null>(null);
 
   const name = boards.find((board) => board.id === boardId)?.name ?? "this board";
   const isActive = boardId === activeBoardId;
@@ -162,12 +149,7 @@ function DeleteBoardDialog({ boardId }: { boardId: string }) {
 
   const confirm = () => {
     if (deleteBoard.isPending) return;
-    setError(null);
-    deleteBoard.mutate(boardId, {
-      onSuccess: () => closeDialog(),
-      onError: (deleteError) =>
-        setError(getApiErrorMessage(deleteError, "Couldn't delete the board. Please try again.")),
-    });
+    deleteBoard.mutate(boardId, { onSuccess: () => closeDialog() });
   };
 
   return (
@@ -181,11 +163,6 @@ function DeleteBoardDialog({ boardId }: { boardId: string }) {
       }
       onClose={closeDialog}
     >
-      {error && (
-        <p role="alert" className="mb-3 text-xs text-destructive">
-          {error}
-        </p>
-      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={closeDialog} autoFocus>
           Cancel

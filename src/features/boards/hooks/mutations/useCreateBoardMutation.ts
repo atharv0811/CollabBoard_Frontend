@@ -1,10 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { createBoard } from "../../api/boardsApis";
 import { emptyDocument, type BoardMeta } from "../../lib/model";
 import { useBoardsStore } from "../../store/boardsStore";
 import { boardsQueryKey, type BoardsQueryData } from "../queries/useBoardsQuery";
 
-export const useCreateBoardMutation = () => {
+interface CreateBoardMutationOptions {
+  notifyOnSuccess?: boolean;
+}
+
+export const useCreateBoardMutation = ({ notifyOnSuccess = true }: CreateBoardMutationOptions = {}) => {
   const queryClient = useQueryClient();
   const addBoard = useBoardsStore((state) => state.addBoard);
 
@@ -25,6 +31,10 @@ export const useCreateBoardMutation = () => {
       });
 
       addBoard(board, document ?? emptyDocument());
+      if (notifyOnSuccess) toast.success(`Created “${name}”.`, { id: "create-board" });
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Couldn't create the board. Please try again."), { id: "create-board" });
     },
   });
 };
