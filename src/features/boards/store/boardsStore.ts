@@ -24,6 +24,7 @@ export interface BoardsState {
 
 export interface BoardsActions {
   syncBoards: (boards: readonly BoardMeta[]) => void;
+  openBoard: (boardId: string, document: BoardDocument) => void;
   addBoard: (board: BoardMeta, document?: BoardDocument) => void;
   createBoard: (name: string) => ActionResult;
   renameBoard: (boardId: string, name: string) => ActionResult;
@@ -39,14 +40,14 @@ export interface BoardsStoreOptions {
   workspace?: Pick<StoreApi<WorkspaceStore>, "getState">;
   now?: () => number;
   createId?: () => string;
-  seedDefaultBoard?: boolean;
+  remote?: boolean;
 }
 
 export const createBoardsStore = (options: BoardsStoreOptions = {}) => {
   const workspace = options.workspace ?? useWorkspaceStore;
   const now = options.now ?? Date.now;
   const newId = options.createId ?? createId;
-  const seedDefaultBoard = options.seedDefaultBoard ?? true;
+  const remote = options.remote ?? false;
 
   const newBoard = (name: string): BoardMeta => {
     const time = now();
@@ -73,7 +74,7 @@ export const createBoardsStore = (options: BoardsStoreOptions = {}) => {
       open(board.id, document);
     };
 
-    const first = seedDefaultBoard ? newBoard(DEFAULT_BOARD_NAME) : null;
+    const first = remote ? null : newBoard(DEFAULT_BOARD_NAME);
     if (first) open(first.id, emptyDocument());
 
     return {
@@ -82,23 +83,14 @@ export const createBoardsStore = (options: BoardsStoreOptions = {}) => {
       activeBoardId: first?.id ?? "",
       dialog: null,
 
-      syncBoards: (incoming) => {
-        const boards = [...incoming];
-        const documents = withCurrentDocument();
-        const { activeBoardId } = get();
-        if (boards.some((board) => board.id === activeBoardId)) {
-          set({ boards, documents });
-          return;
-        }
+      syncBoards: (incoming) => set({ boards: [...incoming] }),
 
-        const next = boards[0];
-        if (!next) {
-          set({ boards, documents, activeBoardId: "" });
-          return;
-        }
-        const document = documents[next.id] ?? emptyDocument();
-        set({ boards, documents: { ...documents, [next.id]: document }, activeBoardId: next.id });
-        open(next.id, document);
+      openBoard: (boardId, serverDocument) => {
+        if (boardId === get().activeBoardId) return;
+        const documents = withCurrentDocument();
+        const document = documents[boardId] ?? serverDocument;
+        set({ documents: { ...documents, [boardId]: document }, activeBoardId: boardId });
+        open(boardId, document);
       },
 
       addBoard,
@@ -132,7 +124,7 @@ export const createBoardsStore = (options: BoardsStoreOptions = {}) => {
         }
 
         const fallback = boards.at(-1);
-        if (!fallback && !seedDefaultBoard) {
+        if (remote) {
           set({ boards, documents, activeBoardId: "" });
           return { ok: true };
         }
@@ -162,6 +154,6 @@ export const createBoardsStore = (options: BoardsStoreOptions = {}) => {
   });
 };
 
-export const useBoardsStore = createBoardsStore({ seedDefaultBoard: false });
+export const useBoardsStore = createBoardsStore({ remote: true });
 
 export type BoardsStoreApi = typeof useBoardsStore;

@@ -13,6 +13,11 @@ export const getBoards = async (params: GetBoardsParams) => {
   return data;
 };
 
+export const getBoard = async (boardId: string) => {
+  const { data } = await api.get<BoardResponse>(`/boards/${boardId}`);
+  return data;
+};
+
 export const createBoard = async (payload: CreateBoardPayload) => {
   const { data } = await api.post<BoardResponse>("/boards", payload);
   return data;

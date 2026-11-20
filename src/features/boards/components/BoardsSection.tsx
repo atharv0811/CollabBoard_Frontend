@@ -1,4 +1,6 @@
 import { LayoutGrid, LoaderCircle, Pencil, Plus, Trash } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { paths } from "@/lib/paths";
 import { cn } from "@/lib/utils";
 import { useBoardsQuery } from "../hooks/queries/useBoardsQuery";
 import { useBoardsStore } from "../store/boardsStore";
@@ -14,7 +16,9 @@ const rowAction =
 export function BoardsSection() {
   const boards = useBoardsStore((state) => state.boards);
   const activeBoardId = useBoardsStore((state) => state.activeBoardId);
-  const switchBoard = useBoardsStore((state) => state.switchBoard);
+  const { boardId: routeBoardId } = useParams<{ boardId: string }>();
+  const navigate = useNavigate();
+  const currentBoardId = routeBoardId ?? activeBoardId;
   const openDialog = useBoardsStore((state) => state.openDialog);
   const { isPending, isError, refetch, isRefetching, hasNextPage, fetchNextPage, isFetchingNextPage, data } =
     useBoardsQuery();
@@ -68,7 +72,7 @@ export function BoardsSection() {
 
       <ul className="flex flex-col gap-px" aria-label="Your boards">
         {boards.map((board) => {
-          const active = board.id === activeBoardId;
+          const active = board.id === currentBoardId;
           return (
             <li
               key={board.id}
@@ -78,7 +82,7 @@ export function BoardsSection() {
               <button
                 type="button"
                 aria-current={active ? "page" : undefined}
-                onClick={() => switchBoard(board.id)}
+                onClick={() => navigate(paths.board(board.id))}
                 className={cn(
                   "flex h-7.5 min-w-0 flex-1 items-center gap-2.5 rounded-tool px-2.5 text-left text-[0.8125rem] text-foreground/85 transition-colors duration-150",
                   "aria-[current=page]:bg-selected aria-[current=page]:font-medium aria-[current=page]:text-selected-foreground",

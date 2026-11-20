@@ -4,7 +4,9 @@ import { getApiErrorMessage } from "@/lib/apiError";
 import { renameBoard } from "../../api/boardsApis";
 import { useBoardsStore } from "../../store/boardsStore";
 import type { RenameBoardPayload } from "../../types/boardTypes";
+import { boardQueryKey } from "../queries/useBoardQuery";
 import { boardsQueryKey, type BoardsQueryData } from "../queries/useBoardsQuery";
+import type { BoardResponse } from "../../types/boardTypes";
 
 export const useRenameBoardMutation = () => {
   const queryClient = useQueryClient();
@@ -25,6 +27,7 @@ export const useRenameBoardMutation = () => {
           })),
         };
       });
+      queryClient.setQueryData<BoardResponse>(boardQueryKey(boardId), (board) => board && { ...board, name });
       toast.success(`Renamed to “${name}”.`, { id: "rename-board" });
     },
     onError: (error) => {

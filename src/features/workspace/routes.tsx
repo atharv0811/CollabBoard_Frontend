@@ -5,5 +5,5 @@ import { paths } from "@/lib/paths";
 
 export const workspaceRoutes: RouteObject = {
   element: <ProtectedRoute />,
-  children: [{ path: paths.workspace, element: <WorkspacePage /> }],
+  children: [{ path: `${paths.workspace}/:boardId?`, element: <WorkspacePage /> }],
 };
