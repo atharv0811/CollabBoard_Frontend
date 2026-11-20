@@ -1,5 +1,6 @@
 import { BoardDialogs } from "@/features/boards/components/BoardDialogs";
 import { SaveStatusIndicator } from "@/features/boards/components/SaveStatusIndicator";
+import { useBoardsSync } from "@/features/boards/hooks/useBoardsSync";
 import { CanvasContextBar } from "@/features/workspace/components/CanvasContextBar";
 import { CanvasSurface } from "@/features/workspace/components/CanvasSurface";
 import { HistoryControls } from "@/features/workspace/components/HistoryControls";
@@ -15,6 +16,7 @@ export default function WorkspacePage() {
   const activeTool = useWorkspaceStore((state) => state.activeTool);
   const setActiveTool = useWorkspaceStore((state) => state.setActiveTool);
   useWorkspaceShortcuts();
+  useBoardsSync();
 
   return (
     <div className="relative h-svh w-full overflow-hidden bg-canvas text-foreground">

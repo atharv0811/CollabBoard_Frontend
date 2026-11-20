@@ -1,6 +1,12 @@
-import { LayoutGrid, Pencil, Plus, Trash } from "lucide-react";
+import { LayoutGrid, LoaderCircle, Pencil, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBoardsQuery } from "../hooks/queries/useBoardsQuery";
 import { useBoardsStore } from "../store/boardsStore";
+
+const statusText = "flex items-center gap-2 px-2.5 py-1.5 text-[0.8125rem] text-muted-foreground";
+
+const linkButton =
+  "rounded-tool px-2.5 py-1.5 text-left text-[0.8125rem] font-medium text-foreground/85 transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-60";
 
 const rowAction =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-colors duration-150 group-hover/row:text-muted-foreground hover:bg-accent hover:text-foreground";
@@ -10,6 +16,9 @@ export function BoardsSection() {
   const activeBoardId = useBoardsStore((state) => state.activeBoardId);
   const switchBoard = useBoardsStore((state) => state.switchBoard);
   const openDialog = useBoardsStore((state) => state.openDialog);
+  const { isPending, isError, refetch, isRefetching, hasNextPage, fetchNextPage, isFetchingNextPage, data } =
+    useBoardsQuery();
+  const total = data?.pages.at(-1)?.pagination.total ?? boards.length;
 
   return (
     <section aria-labelledby="sidebar-boards" className="px-1.5">
@@ -18,7 +27,7 @@ export function BoardsSection() {
           id="sidebar-boards"
           className="text-[0.6875rem] font-semibold tracking-wide text-subtle-foreground uppercase"
         >
-          Boards <span className="font-medium normal-case">· {boards.length}</span>
+          Boards {!isPending && <span className="font-medium normal-case">· {Math.max(total, boards.length)}</span>}
         </h2>
         <button
           type="button"
@@ -29,6 +38,33 @@ export function BoardsSection() {
           <Plus aria-hidden="true" className="size-3.5" strokeWidth={2} />
         </button>
       </div>
+
+      {isPending && boards.length === 0 && (
+        <p role="status" className={statusText}>
+          <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" strokeWidth={2} />
+          Loading boards…
+        </p>
+      )}
+
+      {isError && boards.length === 0 && (
+        <div className="flex flex-col gap-px">
+          <p role="alert" className={cn(statusText, "text-destructive")}>
+            Couldn't load your boards.
+          </p>
+          <button type="button" onClick={() => refetch()} disabled={isRefetching} className={linkButton}>
+            {isRefetching ? "Retrying…" : "Try again"}
+          </button>
+        </div>
+      )}
+
+      {!isPending && !isError && boards.length === 0 && (
+        <div className="flex flex-col gap-px">
+          <p className={statusText}>No boards yet.</p>
+          <button type="button" onClick={() => openDialog({ kind: "create" })} className={linkButton}>
+            Create a board
+          </button>
+        </div>
+      )}
 
       <ul className="flex flex-col gap-px" aria-label="Your boards">
         {boards.map((board) => {
@@ -73,6 +109,17 @@ export function BoardsSection() {
           );
         })}
       </ul>
+
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className={cn(linkButton, "mt-px w-full text-muted-foreground")}
+        >
+          {isFetchingNextPage ? "Loading…" : "Show more boards"}
+        </button>
+      )}
     </section>
   );
 }

@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/apiError";
+import { useCreateBoardMutation } from "../hooks/mutations/useCreateBoardMutation";
 import { useBoardsStore } from "../store/boardsStore";
-import { MAX_BOARD_NAME_LENGTH, nextDefaultName } from "../lib/model";
+import { checkBoardName, MAX_BOARD_NAME_LENGTH, nextDefaultName } from "../lib/model";
 
 interface ModalProps {
   title: string;
@@ -54,7 +56,6 @@ function Modal({ title, description, onClose, children }: ModalProps) {
 function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId?: string }) {
   const boards = useBoardsStore((state) => state.boards);
   const closeDialog = useBoardsStore((state) => state.closeDialog);
-  const createBoard = useBoardsStore((state) => state.createBoard);
   const renameBoard = useBoardsStore((state) => state.renameBoard);
   const current = boards.find((board) => board.id === boardId);
   const [name, setName] = useState(() => (mode === "rename" ? (current?.name ?? "") : nextDefaultName(boards)));
@@ -62,11 +63,29 @@ function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId
   const inputId = useId();
   const errorId = useId();
 
+  const createBoard = useCreateBoardMutation();
+  const creating = createBoard.isPending;
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const result = mode === "create" ? createBoard(name) : renameBoard(boardId ?? "", name);
-    if (result.ok) closeDialog();
-    else setError(result.reason);
+    if (creating) return;
+
+    if (mode === "rename") {
+      const result = renameBoard(boardId ?? "", name);
+      if (result.ok) closeDialog();
+      else setError(result.reason);
+      return;
+    }
+
+    const check = checkBoardName(name, boards);
+    if (!check.ok) {
+      setError(check.reason);
+      return;
+    }
+    createBoard.mutate(check.name, {
+      onSuccess: () => closeDialog(),
+      onError: (createError) => setError(getApiErrorMessage(createError, "Couldn't create the board. Please try again.")),
+    });
   };
 
   return (
@@ -105,7 +124,9 @@ function BoardNameDialog({ mode, boardId }: { mode: "create" | "rename"; boardId
           <Button type="button" variant="ghost" onClick={closeDialog}>
             Cancel
           </Button>
-          <Button type="submit">{mode === "create" ? "Create board" : "Rename"}</Button>
+          <Button type="submit" disabled={creating}>
+            {mode === "create" ? (creating ? "Creating…" : "Create board") : "Rename"}
+          </Button>
         </div>
       </form>
     </Modal>
