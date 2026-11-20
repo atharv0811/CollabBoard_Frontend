@@ -7,7 +7,8 @@ export type PointMap = (point: Point) => Point;
 export function mapElement<T extends CanvasElement>(element: T, map: PointMap): T {
   switch (element.type) {
     case "rectangle":
-    case "diamond": {
+    case "diamond":
+    case "image": {
       const a = map({ x: element.x, y: element.y });
       const b = map({ x: element.x + element.width, y: element.y + element.height });
       return { ...element, ...boundsFromPoints(a, b) };
@@ -22,6 +23,24 @@ export function mapElement<T extends CanvasElement>(element: T, map: PointMap): 
       return { ...element, start: map(element.start), end: map(element.end) };
     case "freehand":
       return { ...element, points: element.points.map(map) };
+    case "text": {
+      // Text scales uniformly: the font grows with the box, so the box always fits the glyphs.
+      const a = map({ x: element.x, y: element.y });
+      const b = map({ x: element.x + element.width, y: element.y + element.height });
+      const box = boundsFromPoints(a, b);
+      const heightScale = element.height > 0 ? box.height / element.height : 1;
+      const widthScale = element.width > 0 ? box.width / element.width : 1;
+      const scale = Math.abs(heightScale - 1) > 1e-9 ? heightScale : widthScale;
+      if (!(scale > 0)) return { ...element, x: box.x, y: box.y };
+      return {
+        ...element,
+        x: box.x,
+        y: box.y,
+        width: element.width * scale,
+        height: element.height * scale,
+        fontSize: element.fontSize * scale,
+      };
+    }
   }
 }
 

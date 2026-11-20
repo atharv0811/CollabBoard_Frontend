@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { resolveBindings } from "../canvas/bindings.ts";
 import type { CanvasElement, Point } from "../canvas/elements.ts";
 import { elementBounds, unionBounds } from "../canvas/hitTest.ts";
 import {
@@ -79,7 +80,9 @@ export const initialWorkspaceState: WorkspaceState = {
 
 export const createWorkspaceStore = () =>
   create<WorkspaceStore>()((set, get) => {
-    const commit = (next: CanvasElement[]) => {
+    const commit = (edited: CanvasElement[]) => {
+      // Connectors attached to shapes that moved, resized or were deleted follow along in the same step.
+      const next = resolveBindings(edited);
       const { elements, history, selectedIds } = get();
       if (next === elements) return;
       set({

@@ -78,6 +78,9 @@ export function hitTestElement(element: CanvasElement, point: Point, tolerance: 
     }
     case "freehand":
       return distanceToPolyline(point, element.points) <= reach;
+    case "text":
+    case "image":
+      return boundsContainPoint(element, point, tolerance);
   }
 }
 
@@ -97,6 +100,8 @@ export function elementBounds(element: CanvasElement): Bounds {
   switch (element.type) {
     case "rectangle":
     case "diamond":
+    case "text":
+    case "image":
       return { x: element.x, y: element.y, width: element.width, height: element.height };
     case "ellipse":
       return { x: element.cx - element.rx, y: element.cy - element.ry, width: element.rx * 2, height: element.ry * 2 };

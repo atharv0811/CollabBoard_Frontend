@@ -1,16 +1,27 @@
 import { memo } from "react";
 import type { CanvasElement } from "../canvas/elements";
 import { arrowheadPoints, diamondVertices, freehandPathData, toSvgPoints } from "../canvas/geometry";
+import { TEXT_FONT_FAMILY, TEXT_LINE_HEIGHT, textLines } from "../canvas/text";
 
 interface CanvasElementViewProps {
   element: CanvasElement;
   preview?: boolean;
+  /** Rendered translucent, e.g. while the eraser is passing over it. */
+  faded?: boolean;
 }
 
-export const CanvasElementView = memo(function CanvasElementView({ element, preview = false }: CanvasElementViewProps) {
-  const common = {
+export const CanvasElementView = memo(function CanvasElementView({
+  element,
+  preview = false,
+  faded = false,
+}: CanvasElementViewProps) {
+  const identity = {
     ...(preview ? { "data-preview": "" } : { "data-shape-id": element.id }),
     "data-element-type": element.type,
+    ...(faded ? { opacity: 0.25, "data-erasing": "" } : {}),
+  } as const;
+  const common = {
+    ...identity,
     stroke: "currentColor",
     strokeWidth: element.style.strokeWidth,
     strokeLinecap: "round",
@@ -62,6 +73,40 @@ export const CanvasElementView = memo(function CanvasElementView({ element, prev
     case "freehand":
       return (
         <path {...common} d={freehandPathData(element.points)} fill="none" data-point-count={element.points.length} />
+      );
+
+    case "text": {
+      const lineHeight = element.fontSize * TEXT_LINE_HEIGHT;
+      return (
+        <text
+          {...identity}
+          fill="currentColor"
+          fontFamily={TEXT_FONT_FAMILY}
+          fontSize={element.fontSize}
+          dominantBaseline="central"
+          xmlSpace="preserve"
+          style={{ whiteSpace: "pre" }}
+        >
+          {textLines(element.text).map((line, index) => (
+            <tspan key={index} x={element.x} y={element.y + lineHeight * (index + 0.5)}>
+              {line}
+            </tspan>
+          ))}
+        </text>
+      );
+    }
+
+    case "image":
+      return (
+        <image
+          {...identity}
+          href={element.src}
+          x={element.x}
+          y={element.y}
+          width={element.width}
+          height={element.height}
+          preserveAspectRatio="none"
+        />
       );
   }
 });
