@@ -183,6 +183,7 @@ function createPage(browser, { url, mode }) {
   async function pointerMove(x, y) {
     if (touch) await touchEvent("touchMove", [{ x, y }]);
     else await mouseEvent("mouseMoved", x, y, true);
+    await evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   }
   async function pointerUp(x, y) {
     if (touch) await touchEvent("touchEnd", []);

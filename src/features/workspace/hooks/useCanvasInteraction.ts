@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
+import { flushSync } from "react-dom";
 import { createId } from "@/lib/createId";
 import { BINDING_SNAP_DISTANCE, bindEnds, boundShapeIds, detachFrom } from "../canvas/bindings";
 import { createScreenToWorld } from "../canvas/coordinates";
@@ -193,6 +194,14 @@ function transformedElements(gesture: TransformGesture, point: Point): CanvasEle
 
 const toPreviewMap = (elements: readonly CanvasElement[]) => new Map(elements.map((element) => [element.id, element]));
 
+interface QueuedPointerMove {
+  gesture: Gesture;
+  svg: SVGSVGElement;
+  worldPoints: Point[];
+  clientX: number;
+  clientY: number;
+}
+
 function pinchMetrics(svg: SVGSVGElement, a: TrackedTouch, b: TrackedTouch) {
   const rect = svg.getBoundingClientRect();
   return {
@@ -225,14 +234,25 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>, op
     return [...boundShapeIds(draftElement), ...boundShapeIds(single)];
   }, [draftElement, preview]);
   const touchesRef = useRef(new Map<number, TrackedTouch>());
+  const queuedPointerMoveRef = useRef<QueuedPointerMove | null>(null);
+  const pointerMoveFrameIdRef = useRef<number | null>(null);
+
+  const cancelQueuedPointerMove = useCallback(() => {
+    if (pointerMoveFrameIdRef.current !== null) cancelAnimationFrame(pointerMoveFrameIdRef.current);
+    pointerMoveFrameIdRef.current = null;
+    queuedPointerMoveRef.current = null;
+  }, []);
+
+  useEffect(() => cancelQueuedPointerMove, [cancelQueuedPointerMove]);
 
   const clearTransient = useCallback(() => {
+    cancelQueuedPointerMove();
     gestureRef.current = null;
     setDraft(null);
     setPreview(null);
     setMarquee(null);
     setErasing(null);
-  }, [setDraft]);
+  }, [setDraft, cancelQueuedPointerMove]);
 
   const openTextEdit = useCallback((edit: TextEdit | null) => {
     textEditRef.current = edit;
@@ -438,22 +458,22 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>, op
     };
   }
 
-  function updateGesture(gesture: Gesture, event: SvgPointerEvent) {
+  function updateGesture(gesture: Gesture, move: QueuedPointerMove) {
     if (gesture.kind === "pinch") {
       const [a, b] = gesture.pointerIds.map((id) => touchesRef.current.get(id));
       if (!a || !b) return;
-      const { midpoint, distance: span } = pinchMetrics(event.currentTarget, a, b);
+      const { midpoint, distance: span } = pinchMetrics(move.svg, a, b);
       useWorkspaceStore.getState().setViewport(pinchViewport(gesture.start, midpoint, span));
       return;
     }
     if (gesture.kind === "pan") {
-      const dx = event.clientX - gesture.startClient.x;
-      const dy = event.clientY - gesture.startClient.y;
+      const dx = move.clientX - gesture.startClient.x;
+      const dy = move.clientY - gesture.startClient.y;
       useWorkspaceStore.getState().setViewport(panBy(gesture.startViewport, dx, dy));
       return;
     }
 
-    const samples = worldSamples(event);
+    const samples = move.worldPoints;
     const point = samples[samples.length - 1];
     if (!point) return;
 
@@ -618,11 +638,42 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>, op
     if (gesture.kind === "pan") setCursor("grabbing");
   };
 
+  const applyQueuedPointerMove = () => {
+    if (pointerMoveFrameIdRef.current !== null) cancelAnimationFrame(pointerMoveFrameIdRef.current);
+    pointerMoveFrameIdRef.current = null;
+    const queuedMove = queuedPointerMoveRef.current;
+    queuedPointerMoveRef.current = null;
+    if (queuedMove && queuedMove.gesture === gestureRef.current) {
+      flushSync(() => updateGesture(queuedMove.gesture, queuedMove));
+    }
+  };
+
+  const queuePointerMove = (gesture: Gesture, event: SvgPointerEvent) => {
+    const needsWorldPoints = gesture.kind !== "pan" && gesture.kind !== "pinch";
+    const worldPoints = needsWorldPoints ? worldSamples(event) : [];
+    const queuedMove = queuedPointerMoveRef.current;
+
+    if (queuedMove && queuedMove.gesture === gesture) {
+      queuedMove.worldPoints.push(...worldPoints);
+      queuedMove.clientX = event.clientX;
+      queuedMove.clientY = event.clientY;
+    } else {
+      queuedPointerMoveRef.current = {
+        gesture,
+        svg: event.currentTarget,
+        worldPoints,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+    }
+    pointerMoveFrameIdRef.current ??= requestAnimationFrame(applyQueuedPointerMove);
+  };
+
   const onPointerMove = (event: SvgPointerEvent) => {
     if (event.pointerType === "touch" && touchesRef.current.has(event.pointerId)) trackTouch(event);
 
     const gesture = gestureFor(event);
-    if (gesture) updateGesture(gesture, event);
+    if (gesture) queuePointerMove(gesture, event);
     else if (!gestureRef.current) updateHoverCursor(event);
   };
 
@@ -660,6 +711,7 @@ export function useCanvasInteraction(svgRef: RefObject<SVGSVGElement | null>, op
     const gesture = gestureFor(event);
     if (!gesture) return;
 
+    applyQueuedPointerMove();
     const samples = gesture.kind === "pan" || gesture.kind === "pinch" ? [] : worldSamples(event);
     clearTransient();
     commitGesture(gesture, samples);
